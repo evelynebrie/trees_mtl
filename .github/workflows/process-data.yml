@@ -7,6 +7,9 @@ on:
       - '**.csv'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   process-data:
     runs-on: ubuntu-latest
@@ -14,6 +17,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
       
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -34,17 +39,11 @@ jobs:
       run: |
         python3 combine_tree_data.py
         
-    - name: Commit processed data
+    - name: Commit and push processed data
       if: steps.check_json.outputs.exists == 'false'
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add trees_combined.json
-        git diff --quiet && git diff --staged --quiet || git commit -m "🌳 Auto-generate: Combined tree data JSON"
-        
-    - name: Push changes
-      if: steps.check_json.outputs.exists == 'false'
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ github.ref }}
+        git commit -m "🌳 Auto-generate: Combined tree data JSON" || echo "No changes to commit"
+        git push
