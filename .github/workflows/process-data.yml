@@ -30,20 +30,47 @@ jobs:
       run: |
         if [ -f "trees_combined.json" ]; then
           echo "exists=true" >> $GITHUB_OUTPUT
+          echo "JSON file already exists, skipping generation"
         else
           echo "exists=false" >> $GITHUB_OUTPUT
+          echo "JSON file does not exist, will generate"
         fi
+        
+    - name: List CSV files
+      if: steps.check_json.outputs.exists == 'false'
+      run: |
+        echo "Listing CSV files:"
+        ls -lh *.csv || echo "No CSV files found!"
         
     - name: Process CSV files
       if: steps.check_json.outputs.exists == 'false'
       run: |
+        echo "Running Python script..."
         python3 combine_tree_data.py
+        echo "Script completed"
+        
+    - name: Verify JSON was created
+      if: steps.check_json.outputs.exists == 'false'
+      run: |
+        if [ -f "trees_combined.json" ]; then
+          echo "✓ JSON file created successfully"
+          ls -lh trees_combined.json
+        else
+          echo "✗ ERROR: JSON file was not created!"
+          exit 1
+        fi
         
     - name: Commit and push processed data
       if: steps.check_json.outputs.exists == 'false'
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git add trees_combined.json
-        git commit -m "🌳 Auto-generate: Combined tree data JSON" || echo "No changes to commit"
-        git push
+        
+        if [ -f "trees_combined.json" ]; then
+          git add trees_combined.json
+          git commit -m "🌳 Auto-generate: Combined tree data JSON" || echo "No changes to commit"
+          git push
+        else
+          echo "No JSON file to commit"
+          exit 1
+        fi
