@@ -4,15 +4,28 @@ Visualisation interactive des arbres plantés à Montréal avec chronologie temp
 
 ## 🚀 Déploiement sur GitHub Pages
 
-### 1. Créer un nouveau dépôt GitHub
+### Étape 1 : Générer le fichier de données
+
+**Important** : Pour un chargement ultra-rapide, vous devez d'abord combiner les 7 fichiers CSV en un seul fichier JSON.
+
+1. Placez tous les fichiers CSV dans un dossier avec `combine_tree_data.py`
+2. Exécutez le script :
+   ```bash
+   python3 combine_tree_data.py
+   ```
+3. Cela créera `trees_combined.json` (chargement instantané ⚡)
+
+### Étape 2 : Téléverser sur GitHub
 
 1. Créez un nouveau dépôt sur GitHub
 2. Téléversez ces fichiers :
    - `index.html`
-   - Les 7 fichiers CSV : `arbres-part-aa.csv` à `arbres-part-ag.csv`
+   - `trees_combined.json` ⚡ (fichier généré)
    - `README.md` (ce fichier)
+   
+**Note** : Vous n'avez PAS besoin de téléverser les 7 fichiers CSV individuels sur GitHub, seulement le `trees_combined.json`.
 
-### 2. Activer GitHub Pages
+### Étape 3 : Activer GitHub Pages
 
 1. Allez dans **Settings** → **Pages**
 2. Sous "Source", sélectionnez **Deploy from a branch**
@@ -23,49 +36,55 @@ Votre site sera disponible à : `https://votrenom.github.io/nom-du-depot/`
 
 ## 🌳 Fonctionnalités
 
-- **Curseur temporel** : Naviguez à travers les années pour voir l'évolution des plantations
-- **Lecture automatique** : Visualisation animée des plantations (2,5 secondes par année)
-- **Filtre par type** : Sélectionnez une espèce d'arbre spécifique
+- **Curseur temporel** : Naviguez à travers les années
+- **Lecture automatique** : Animation fluide (2,5 secondes par année)
+- **Filtre par type** : Sélectionnez une espèce spécifique
 - **Information détaillée** : Cliquez sur un arbre pour voir ses détails
-- **Statistiques en temps réel** : Nombre d'arbres visibles et total
+- **Statistiques en temps réel** : Nombre d'arbres visibles
+- **Chargement instantané** ⚡ : Grâce au fichier JSON pré-traité
 
 ## 🧪 Test en local
-
-Pour tester localement avant le déploiement :
 
 ```bash
 # Avec Python 3
 python3 -m http.server 8000
 
-# Ouvrez ensuite : http://localhost:8000
+# Ouvrez : http://localhost:8000
 ```
 
 ## 📊 Structure des fichiers
 
+### Sur votre ordinateur (pour la génération) :
+```
+dossier-local/
+│
+├── combine_tree_data.py    # Script Python
+├── arbres-part-aa.csv      # Données source
+├── arbres-part-ab.csv
+├── ... (jusqu'à ag.csv)
+└── trees_combined.json     # ← Généré par le script
+```
+
+### Sur GitHub (déploiement) :
 ```
 votre-depot/
 │
 ├── index.html              # Page principale
-├── arbres-part-aa.csv      # Données arbres (partie 1)
-├── arbres-part-ab.csv      # Données arbres (partie 2)
-├── arbres-part-ac.csv      # Données arbres (partie 3)
-├── arbres-part-ad.csv      # Données arbres (partie 4)
-├── arbres-part-ae.csv      # Données arbres (partie 5)
-├── arbres-part-af.csv      # Données arbres (partie 6)
-├── arbres-part-ag.csv      # Données arbres (partie 7)
-└── README.md               # Ce fichier
+├── trees_combined.json     # Données (fichier unique)
+└── README.md               # Documentation
 ```
 
-## ⚙️ Configuration
+## ⚡ Pourquoi c'est plus rapide ?
 
-Le jeton Mapbox est déjà configuré dans le fichier `index.html`. Les années invalides (< 1850 ou > 2025) sont automatiquement filtrées.
+- **Avant** : 7 fichiers CSV → 7 requêtes réseau → parsing CSV → ~10-30 secondes
+- **Après** : 1 fichier JSON → 1 requête → parsing natif → **< 2 secondes** ⚡
 
-## 🎨 Design
+## ⚙️ Filtrage des données
 
-- Interface minimaliste et élégante
-- Palette de couleurs verte sobre
-- Carte de base claire (Mapbox Light)
-- Interface entièrement en français
+Le script filtre automatiquement :
+- Années invalides (< 1850 ou > 2025)
+- Coordonnées manquantes ou invalides
+- Valeurs aberrantes comme "205" sont ignorées
 
 ---
 
