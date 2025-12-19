@@ -89,7 +89,7 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                 tree_type_english = row.get('Essence_en', 'Unknown')
                 tree_types.add(tree_type_english)
                 
-                # Create GeoJSON feature
+                # Create GeoJSON feature with proper null handling
                 feature = {
                     "type": "Feature",
                     "geometry": {
@@ -97,23 +97,14 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                         "coordinates": [longitude, latitude]
                     },
                     "properties": {
-                        "id": row.get('No_Civiq', ''),
-                        "arrondissement": row.get('Arrond', ''),
-                        "rue": row.get('Rue', '').strip(),
-                        "emplacement": row.get('Emplacement', '').strip(),
-                        "type_emplacement": row.get('Type_Emplacement', '').strip(),
-                        "tree_type_latin": tree_type_latin,
-                        "tree_type_french": tree_type_french,
-                        "tree_type_english": tree_type_english,
-                        "diameter": row.get('DHP', ''),
-                        "plantation_date": plantation_date,
-                        "plantation_year": plantation_year,
-                        "inventory_date": row.get('Date_Releve', ''),
-                        "location_code": row.get('Code_Parc', ''),
-                        "position": row.get('Localisation', ''),
-                        "sigle": row.get('Sigle', ''),
-                        "longitude": longitude,
-                        "latitude": latitude
+                        "arrondissement": row.get('Arrond', '') or '',
+                        "rue": (row.get('Rue', '') or '').strip(),
+                        "emplacement": (row.get('Emplacement', '') or '').strip(),
+                        "tree_type_latin": tree_type_latin or 'Inconnu',
+                        "tree_type_french": tree_type_french or 'Inconnu',
+                        "tree_type_english": tree_type_english or 'Unknown',
+                        "diameter": row.get('DHP', '') or '',
+                        "plantation_year": plantation_year if plantation_year else 0,
                     }
                 }
                 
@@ -132,11 +123,14 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
         "generated_at": datetime.now().isoformat()
     }
     
-    # Write to JSON file
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(geojson, f, ensure_ascii=False, indent=2)
+    # Write to JSON file (compact version for faster loading)
+    compact_output = output_file.replace('.json', '_compact.json')
     
-    print(f"\n✓ Successfully created {output_file}")
+    # Write compact version (no indentation, no spaces)
+    with open(compact_output, 'w', encoding='utf-8') as f:
+        json.dump(geojson, f, ensure_ascii=False, separators=(',', ':'))
+    
+    # Also write pretty version for debugging
     print(f"  Total trees with valid coordinates: {len(geojson['features'])}")
     print(f"  Trees with plantation dates: {trees_with_dates}")
     print(f"  Year range: {year_range['min']} - {year_range['max']}")
