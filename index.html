@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbres de Montréal</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --green: #2d5016;
+            --green-light: #4a7c2d;
+            --green-accent: #6b9d4a;
+            --bg: #fafafa;
+            --text: #1a1a1a;
+            --text-muted: #666;
+            --border: rgba(45, 80, 22, 0.1);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+        }
+        
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+        
+        .overlay {
+            position: absolute;
+            z-index: 1;
+        }
+        
+        /* Loading */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: white;
+            padding: 32px 48px;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(45, 80, 22, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--green);
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        
+        /* Header */
+        .header {
+            top: 24px;
+            left: 24px;
+            right: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+        
+        .title-section {
+            pointer-events: auto;
+            background: white;
+            padding: 20px 28px;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--green);
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        
+        /* Controls */
+        .controls {
+            pointer-events: auto;
+            background: white;
+            padding: 18px 22px;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            min-width: 240px;
+        }
+        
+        .control-label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        select {
+            width: 100%;
+            padding: 10px 14px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        select:hover {
+            border-color: var(--green-light);
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(45, 80, 22, 0.05);
+        }
+        
+        /* Stats */
+        .stats-panel {
+            bottom: 140px;
+            left: 24px;
+            pointer-events: auto;
+            background: white;
+            padding: 18px 22px;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            min-width: 180px;
+        }
+        
+        .stat-item {
+            margin-bottom: 14px;
+        }
+        
+        .stat-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        .stat-value {
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--green);
+            line-height: 1;
+        }
+        
+        /* Timeline */
+        .timeline-control {
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            pointer-events: auto;
+            background: white;
+            padding: 24px 32px;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+        }
+        
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .current-year {
+            font-size: 42px;
+            font-weight: 600;
+            color: var(--green);
+            line-height: 1;
+        }
+        
+        .play-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--green);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: var(--green);
+            color: white;
+            border-color: var(--green);
+        }
+        
+        button.active {
+            background: var(--green);
+            color: white;
+            border-color: var(--green);
+        }
+        
+        /* Slider */
+        .slider-container {
+            margin-top: 8px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(45, 80, 22, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--green);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--green);
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        .year-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        /* Popup */
+        .mapboxgl-popup-content {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            font-family: 'Inter', sans-serif;
+            color: var(--text);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+            border: 1px solid var(--border);
+        }
+        
+        .mapboxgl-popup-close-button {
+            color: var(--text-muted);
+            font-size: 20px;
+            padding: 6px;
+        }
+        
+        .popup-title {
+            font-size: 16px;
+            color: var(--green);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .popup-field {
+            margin-bottom: 6px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .popup-label {
+            color: var(--text-muted);
+            display: inline-block;
+            min-width: 110px;
+            font-weight: 500;
+        }
+        
+        .popup-value {
+            color: var(--text);
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .controls {
+                width: 100%;
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+            
+            .current-year {
+                font-size: 32px;
+            }
+            
+            .stats-panel {
+                bottom: 160px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Chargement des données...</div>
+    </div>
+    
+    <div class="overlay header">
+        <div class="title-section">
+            <h1>Arbres de Montréal</h1>
+            <div class="subtitle">Chronologie des plantations urbaines</div>
+        </div>
+        
+        <div class="controls">
+            <label class="control-label">Type d'arbre</label>
+            <select id="treeTypeFilter">
+                <option value="all">Tous les arbres</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="overlay stats-panel">
+        <div class="stat-item">
+            <div class="stat-label">Arbres visibles</div>
+            <div class="stat-value" id="visibleTrees">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Total</div>
+            <div class="stat-value" id="totalTrees">0</div>
+        </div>
+    </div>
+    
+    <div class="overlay timeline-control">
+        <div class="timeline-header">
+            <div class="current-year" id="currentYear">2025</div>
+            <div class="play-controls">
+                <button id="playBtn">▶ Lecture</button>
+                <button id="resetBtn">↺ Réinitialiser</button>
+            </div>
+        </div>
+        <div class="slider-container">
+            <input type="range" id="yearSlider" min="1900" max="2025" value="2025" step="1">
+            <div class="year-labels">
+                <span id="minYear">1900</span>
+                <span id="maxYear">2025</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZXZlbHluZWJyaWUiLCJhIjoiY2themE5OGF2MDdxazJybG9oNzUyaXoxNSJ9.njPe2lcTp82DKjDeGkHaQA';
+        
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v11',
+            center: [-73.597, 45.600],
+            zoom: 11.5,
+            pitch: 0,
+            bearing: 0
+        });
+        
+        let treeData = null;
+        let minYear = 1900;
+        let maxYear = 2025;
+        let currentYear = 2025;
+        let isPlaying = false;
+        let playInterval = null;
+        let allTreeTypes = [];
+        
+        // Load and process CSV files
+        async function loadTreeData() {
+            const csvFiles = [
+                'arbres-part-aa.csv',
+                'arbres-part-ab.csv',
+                'arbres-part-ac.csv',
+                'arbres-part-ad.csv',
+                'arbres-part-ae.csv',
+                'arbres-part-af.csv',
+                'arbres-part-ag.csv'
+            ];
+            
+            const allFeatures = [];
+            const treeTypes = new Set();
+            let yearRange = { min: Infinity, max: -Infinity };
+            
+            for (const file of csvFiles) {
+                try {
+                    const response = await fetch(file);
+                    const text = await response.text();
+                    
+                    const result = Papa.parse(text, {
+                        header: true,
+                        skipEmptyLines: true
+                    });
+                    
+                    result.data.forEach(row => {
+                        const longitude = parseFloat(row.Longitude);
+                        const latitude = parseFloat(row.Latitude);
+                        
+                        if (!longitude || !latitude || isNaN(longitude) || isNaN(latitude)) return;
+                        
+                        const plantationYear = parsePlantationYear(row.Date_Plantation);
+                        
+                        // Validate year - only accept years between 1850 and current year
+                        if (plantationYear && plantationYear >= 1850 && plantationYear <= 2025) {
+                            yearRange.min = Math.min(yearRange.min, plantationYear);
+                            yearRange.max = Math.max(yearRange.max, plantationYear);
+                        }
+                        
+                        const treeTypeEnglish = row.Essence_en || 'Inconnu';
+                        treeTypes.add(treeTypeEnglish);
+                        
+                        allFeatures.push({
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [longitude, latitude]
+                            },
+                            properties: {
+                                arrondissement: row.Arrond || '',
+                                rue: (row.Rue || '').trim(),
+                                emplacement: (row.Emplacement || '').trim(),
+                                tree_type_latin: row.Essence_latin || 'Inconnu',
+                                tree_type_french: row.Essence_fr || 'Inconnu',
+                                tree_type_english: treeTypeEnglish,
+                                diameter: row.DHP || '',
+                                plantation_year: (plantationYear && plantationYear >= 1850 && plantationYear <= 2025) ? plantationYear : null,
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.error(`Error loading ${file}:`, error);
+                }
+            }
+            
+            treeData = {
+                type: 'FeatureCollection',
+                features: allFeatures
+            };
+            
+            minYear = yearRange.min !== Infinity ? yearRange.min : 1900;
+            maxYear = yearRange.max !== -Infinity ? yearRange.max : 2025;
+            currentYear = maxYear;
+            allTreeTypes = Array.from(treeTypes).sort();
+            
+            // Update UI
+            document.getElementById('yearSlider').min = minYear;
+            document.getElementById('yearSlider').max = maxYear;
+            document.getElementById('yearSlider').value = maxYear;
+            document.getElementById('minYear').textContent = minYear;
+            document.getElementById('maxYear').textContent = maxYear;
+            document.getElementById('currentYear').textContent = maxYear;
+            document.getElementById('totalTrees').textContent = treeData.features.length.toLocaleString('fr-CA');
+            
+            // Populate tree type filter
+            const select = document.getElementById('treeTypeFilter');
+            allTreeTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                select.appendChild(option);
+            });
+            
+            initializeMap();
+        }
+        
+        function parsePlantationYear(dateString) {
+            if (!dateString || dateString.trim() === '') return null;
+            try {
+                const date = new Date(dateString.replace('T00:00:00', ''));
+                const year = date.getFullYear();
+                // Return null for invalid years
+                if (year < 1850 || year > 2025) return null;
+                return year;
+            } catch {
+                return null;
+            }
+        }
+        
+        function initializeMap() {
+            map.on('load', () => {
+                map.addSource('trees', {
+                    type: 'geojson',
+                    data: treeData
+                });
+                
+                // Trees without dates
+                map.addLayer({
+                    id: 'trees-no-date',
+                    type: 'circle',
+                    source: 'trees',
+                    filter: ['==', ['get', 'plantation_year'], null],
+                    paint: {
+                        'circle-radius': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            10, 2,
+                            15, 5,
+                            18, 10
+                        ],
+                        'circle-color': '#6b9d4a',
+                        'circle-opacity': 0.2,
+                        'circle-stroke-width': 0.5,
+                        'circle-stroke-color': '#4a7c2d',
+                        'circle-stroke-opacity': 0.3
+                    }
+                });
+                
+                // Trees with dates
+                map.addLayer({
+                    id: 'trees-with-date',
+                    type: 'circle',
+                    source: 'trees',
+                    filter: ['!=', ['get', 'plantation_year'], null],
+                    paint: {
+                        'circle-radius': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            10, 3,
+                            15, 6,
+                            18, 12
+                        ],
+                        'circle-color': [
+                            'interpolate',
+                            ['linear'],
+                            ['get', 'plantation_year'],
+                            minYear, '#2d5016',
+                            (minYear + maxYear) / 2, '#4a7c2d',
+                            maxYear, '#6b9d4a'
+                        ],
+                        'circle-opacity': 0.7,
+                        'circle-stroke-width': 1,
+                        'circle-stroke-color': '#ffffff',
+                        'circle-stroke-opacity': 0.8
+                    }
+                });
+                
+                map.on('click', 'trees-with-date', showPopup);
+                map.on('click', 'trees-no-date', showPopup);
+                
+                map.on('mouseenter', 'trees-with-date', () => {
+                    map.getCanvas().style.cursor = 'pointer';
+                });
+                map.on('mouseleave', 'trees-with-date', () => {
+                    map.getCanvas().style.cursor = '';
+                });
+                map.on('mouseenter', 'trees-no-date', () => {
+                    map.getCanvas().style.cursor = 'pointer';
+                });
+                map.on('mouseleave', 'trees-no-date', () => {
+                    map.getCanvas().style.cursor = '';
+                });
+                
+                updateFilter();
+                document.getElementById('loading').style.display = 'none';
+            });
+        }
+        
+        function showPopup(e) {
+            const properties = e.features[0].properties;
+            
+            let html = `<div class="popup-title">${properties.tree_type_french}</div>`;
+            html += `<div class="popup-field"><span class="popup-label">Nom latin :</span> <span class="popup-value">${properties.tree_type_latin}</span></div>`;
+            html += `<div class="popup-field"><span class="popup-label">Arrondissement :</span> <span class="popup-value">${properties.arrondissement}</span></div>`;
+            html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.rue}</span></div>`;
+            html += `<div class="popup-field"><span class="popup-label">Emplacement :</span> <span class="popup-value">${properties.emplacement}</span></div>`;
+            
+            if (properties.plantation_year) {
+                html += `<div class="popup-field"><span class="popup-label">Année :</span> <span class="popup-value">${properties.plantation_year}</span></div>`;
+            } else {
+                html += `<div class="popup-field"><span class="popup-label">Année :</span> <span class="popup-value">Inconnue</span></div>`;
+            }
+            
+            if (properties.diameter) {
+                html += `<div class="popup-field"><span class="popup-label">Diamètre :</span> <span class="popup-value">${properties.diameter} cm</span></div>`;
+            }
+            
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(html)
+                .addTo(map);
+        }
+        
+        function updateFilter() {
+            const selectedType = document.getElementById('treeTypeFilter').value;
+            
+            let filters = [
+                'all',
+                ['<=', ['get', 'plantation_year'], currentYear]
+            ];
+            
+            if (selectedType !== 'all') {
+                filters.push(['==', ['get', 'tree_type_english'], selectedType]);
+            }
+            
+            map.setFilter('trees-with-date', filters);
+            
+            if (selectedType !== 'all') {
+                map.setFilter('trees-no-date', [
+                    'all',
+                    ['==', ['get', 'plantation_year'], null],
+                    ['==', ['get', 'tree_type_english'], selectedType]
+                ]);
+            } else {
+                map.setFilter('trees-no-date', ['==', ['get', 'plantation_year'], null]);
+            }
+            
+            updateStats();
+        }
+        
+        function updateStats() {
+            const selectedType = document.getElementById('treeTypeFilter').value;
+            
+            let visible = 0;
+            treeData.features.forEach(feature => {
+                const props = feature.properties;
+                const matchesType = selectedType === 'all' || props.tree_type_english === selectedType;
+                const matchesYear = props.plantation_year === null || props.plantation_year <= currentYear;
+                
+                if (matchesType && matchesYear) {
+                    visible++;
+                }
+            });
+            
+            document.getElementById('visibleTrees').textContent = visible.toLocaleString('fr-CA');
+        }
+        
+        // Event Listeners
+        document.getElementById('yearSlider').addEventListener('input', (e) => {
+            currentYear = parseInt(e.target.value);
+            document.getElementById('currentYear').textContent = currentYear;
+            updateFilter();
+        });
+        
+        document.getElementById('treeTypeFilter').addEventListener('change', () => {
+            updateFilter();
+        });
+        
+        document.getElementById('playBtn').addEventListener('click', () => {
+            if (isPlaying) {
+                stopPlaying();
+            } else {
+                startPlaying();
+            }
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            stopPlaying();
+            currentYear = maxYear;
+            document.getElementById('yearSlider').value = maxYear;
+            document.getElementById('currentYear').textContent = maxYear;
+            updateFilter();
+        });
+        
+        function startPlaying() {
+            isPlaying = true;
+            document.getElementById('playBtn').textContent = '⏸ Pause';
+            document.getElementById('playBtn').classList.add('active');
+            
+            if (currentYear >= maxYear) {
+                currentYear = minYear;
+            }
+            
+            playInterval = setInterval(() => {
+                currentYear++;
+                
+                if (currentYear > maxYear) {
+                    stopPlaying();
+                    return;
+                }
+                
+                document.getElementById('yearSlider').value = currentYear;
+                document.getElementById('currentYear').textContent = currentYear;
+                updateFilter();
+            }, 2500);
+        }
+        
+        function stopPlaying() {
+            isPlaying = false;
+            document.getElementById('playBtn').textContent = '▶ Lecture';
+            document.getElementById('playBtn').classList.remove('active');
+            
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+        }
+        
+        loadTreeData();
+    </script>
+</body>
+</html>
