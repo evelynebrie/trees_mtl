@@ -6,7 +6,6 @@
     <title>Arbres de Montréal</title>
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
-    <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         
         * {
@@ -157,7 +156,7 @@
         
         /* Stats */
         .stats-panel {
-            bottom: 140px;
+            bottom: 160px;
             left: 24px;
             pointer-events: auto;
             background: white;
@@ -359,7 +358,7 @@
             }
             
             .stats-panel {
-                bottom: 160px;
+                bottom: 180px;
             }
         }
     </style>
@@ -375,7 +374,7 @@
     <div class="overlay header">
         <div class="title-section">
             <h1>Arbres de Montréal</h1>
-            <div class="subtitle">Chronologie des plantations urbaines</div>
+            <div class="subtitle">Chronologie des plantations</div>
         </div>
         
         <div class="controls">
@@ -414,7 +413,6 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoiZXZlbHluZWJyaWUiLCJhIjoiY2themE5OGF2MDdxazJybG9oNzUyaXoxNSJ9.njPe2lcTp82DKjDeGkHaQA';
         
@@ -435,113 +433,73 @@
         let playInterval = null;
         let allTreeTypes = [];
         
-        // Load and process CSV files
+        // Load pre-processed tree data (much faster!)
         async function loadTreeData() {
-            const csvFiles = [
-                'arbres-part-aa.csv',
-                'arbres-part-ab.csv',
-                'arbres-part-ac.csv',
-                'arbres-part-ad.csv',
-                'arbres-part-ae.csv',
-                'arbres-part-af.csv',
-                'arbres-part-ag.csv'
-            ];
-            
-            const allFeatures = [];
-            const treeTypes = new Set();
-            let yearRange = { min: Infinity, max: -Infinity };
-            
-            for (const file of csvFiles) {
-                try {
-                    const response = await fetch(file);
-                    const text = await response.text();
-                    
-                    const result = Papa.parse(text, {
-                        header: true,
-                        skipEmptyLines: true
-                    });
-                    
-                    result.data.forEach(row => {
-                        const longitude = parseFloat(row.Longitude);
-                        const latitude = parseFloat(row.Latitude);
-                        
-                        if (!longitude || !latitude || isNaN(longitude) || isNaN(latitude)) return;
-                        
-                        const plantationYear = parsePlantationYear(row.Date_Plantation);
-                        
-                        // Validate year - only accept years between 1850 and current year
-                        if (plantationYear && plantationYear >= 1850 && plantationYear <= 2025) {
-                            yearRange.min = Math.min(yearRange.min, plantationYear);
-                            yearRange.max = Math.max(yearRange.max, plantationYear);
-                        }
-                        
-                        const treeTypeEnglish = row.Essence_en || 'Inconnu';
-                        treeTypes.add(treeTypeEnglish);
-                        
-                        allFeatures.push({
-                            type: 'Feature',
-                            geometry: {
-                                type: 'Point',
-                                coordinates: [longitude, latitude]
-                            },
-                            properties: {
-                                arrondissement: row.Arrond || '',
-                                rue: (row.Rue || '').trim(),
-                                emplacement: (row.Emplacement || '').trim(),
-                                tree_type_latin: row.Essence_latin || 'Inconnu',
-                                tree_type_french: row.Essence_fr || 'Inconnu',
-                                tree_type_english: treeTypeEnglish,
-                                diameter: row.DHP || '',
-                                plantation_year: (plantationYear && plantationYear >= 1850 && plantationYear <= 2025) ? plantationYear : null,
-                            }
-                        });
-                    });
-                } catch (error) {
-                    console.error(`Error loading ${file}:`, error);
-                }
-            }
-            
-            treeData = {
-                type: 'FeatureCollection',
-                features: allFeatures
-            };
-            
-            minYear = yearRange.min !== Infinity ? yearRange.min : 1900;
-            maxYear = yearRange.max !== -Infinity ? yearRange.max : 2025;
-            currentYear = maxYear;
-            allTreeTypes = Array.from(treeTypes).sort();
-            
-            // Update UI
-            document.getElementById('yearSlider').min = minYear;
-            document.getElementById('yearSlider').max = maxYear;
-            document.getElementById('yearSlider').value = maxYear;
-            document.getElementById('minYear').textContent = minYear;
-            document.getElementById('maxYear').textContent = maxYear;
-            document.getElementById('currentYear').textContent = maxYear;
-            document.getElementById('totalTrees').textContent = treeData.features.length.toLocaleString('fr-CA');
-            
-            // Populate tree type filter
-            const select = document.getElementById('treeTypeFilter');
-            allTreeTypes.forEach(type => {
-                const option = document.createElement('option');
-                option.value = type;
-                option.textContent = type;
-                select.appendChild(option);
-            });
-            
-            initializeMap();
-        }
-        
-        function parsePlantationYear(dateString) {
-            if (!dateString || dateString.trim() === '') return null;
             try {
-                const date = new Date(dateString.replace('T00:00:00', ''));
-                const year = date.getFullYear();
-                // Return null for invalid years
-                if (year < 1850 || year > 2025) return null;
-                return year;
-            } catch {
-                return null;
+                document.getElementById('loading').innerHTML = `
+                    <div class="spinner"></div>
+                    <div class="loading-text">Chargement des données...</div>
+                `;
+                
+                const response = await fetch('trees_combined.json');
+                
+                if (!response.ok) {
+                    throw new Error('Fichier de données non trouvé. Veuillez générer trees_combined.json avec le script Python.');
+                }
+                
+                const data = await response.json();
+                treeData = data;
+                
+                // Extract metadata if available, otherwise calculate from features
+                if (data.metadata) {
+                    minYear = data.metadata.year_range.min || 1900;
+                    maxYear = data.metadata.year_range.max || 2025;
+                    allTreeTypes = data.metadata.tree_types || [];
+                } else {
+                    // Calculate from features
+                    const years = data.features
+                        .map(f => f.properties.plantation_year)
+                        .filter(y => y != null && y >= 1850 && y <= 2025);
+                    
+                    minYear = Math.min(...years);
+                    maxYear = Math.max(...years);
+                    
+                    const typeSet = new Set(
+                        data.features.map(f => f.properties.tree_type_english)
+                    );
+                    allTreeTypes = Array.from(typeSet).sort();
+                }
+                
+                currentYear = maxYear;
+                
+                // Update UI
+                document.getElementById('yearSlider').min = minYear;
+                document.getElementById('yearSlider').max = maxYear;
+                document.getElementById('yearSlider').value = maxYear;
+                document.getElementById('minYear').textContent = minYear;
+                document.getElementById('maxYear').textContent = maxYear;
+                document.getElementById('currentYear').textContent = maxYear;
+                document.getElementById('totalTrees').textContent = treeData.features.length.toLocaleString('fr-CA');
+                
+                // Populate tree type filter
+                const select = document.getElementById('treeTypeFilter');
+                allTreeTypes.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = type;
+                    select.appendChild(option);
+                });
+                
+                initializeMap();
+                
+            } catch (error) {
+                console.error('Error loading tree data:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div class="loading-text" style="color: #d32f2f;">
+                        ❌ Erreur: ${error.message}<br><br>
+                        Veuillez générer trees_combined.json avec le script Python.
+                    </div>
+                `;
             }
         }
         
