@@ -28,9 +28,9 @@ jobs:
     - name: Check if JSON already exists
       id: check_json
       run: |
-        if [ -f "trees_combined.json" ]; then
+        if [ -f "trees_combined.json.gz" ]; then
           echo "exists=true" >> $GITHUB_OUTPUT
-          echo "JSON file already exists, skipping generation"
+          echo "Gzipped JSON file already exists, skipping generation"
         else
           echo "exists=false" >> $GITHUB_OUTPUT
           echo "JSON file does not exist, will generate"
@@ -52,9 +52,12 @@ jobs:
     - name: Verify JSON was created
       if: steps.check_json.outputs.exists == 'false'
       run: |
-        if [ -f "trees_combined.json" ]; then
-          echo "✓ JSON file created successfully"
-          ls -lh trees_combined.json
+        if [ -f "trees_combined.json.gz" ]; then
+          echo "✓ Gzipped JSON file created successfully"
+          ls -lh trees_combined.json.gz
+          # Remove uncompressed version to save space
+          rm -f trees_combined.json
+          echo "✓ Removed uncompressed JSON file"
         else
           echo "✗ ERROR: JSON file was not created!"
           exit 1
@@ -66,9 +69,9 @@ jobs:
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         
-        if [ -f "trees_combined.json" ]; then
-          git add trees_combined.json
-          git commit -m "🌳 Auto-generate: Combined tree data JSON" || echo "No changes to commit"
+        if [ -f "trees_combined.json.gz" ]; then
+          git add trees_combined.json.gz
+          git commit -m "🌳 Auto-generate: Combined tree data JSON (gzipped)" || echo "No changes to commit"
           git push
         else
           echo "No JSON file to commit"
