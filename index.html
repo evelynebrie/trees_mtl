@@ -89,6 +89,7 @@
             justify-content: space-between;
             align-items: flex-start;
             pointer-events: none;
+            gap: 24px;
         }
         
         .title-section {
@@ -98,6 +99,7 @@
             border-radius: 16px;
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
             border-left: 4px solid var(--green);
+            flex-shrink: 0;
         }
         
         h1 {
@@ -122,6 +124,8 @@
             border-radius: 16px;
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
             min-width: 240px;
+            border-left: 4px solid var(--green);
+            flex-shrink: 0;
         }
         
         .control-label {
@@ -380,8 +384,7 @@
     
     <div class="overlay header">
         <div class="title-section">
-            <h1>Arbres de Montréal</h1>
-            <div class="subtitle">Chronologie des plantations</div>
+            <h1>Chronologie des arbres de Montréal</h1>
         </div>
         
         <div class="controls">
@@ -635,23 +638,35 @@
         function showPopup(e) {
             const properties = e.features[0].properties;
             
-            let html = `<div class="popup-title">${properties.tf}</div>`;
-            html += `<div class="popup-field"><span class="popup-label">Nom latin :</span> <span class="popup-value">${properties.tl}</span></div>`;
-            html += `<div class="popup-field"><span class="popup-label">Arrondissement :</span> <span class="popup-value">${properties.a}</span></div>`;
-            html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.r}</span></div>`;
+            let html = `<div class="popup-title">${properties.tf || 'Arbre'}</div>`;
             
-            // Fix typo: PArc -> Parc
-            let emplacement = properties.e;
-            if (emplacement && emplacement.includes('PArc')) {
-                emplacement = emplacement.replace(/PArc/g, 'Parc');
+            // Année de plantation en premier
+            if (properties.y && properties.y > 0) {
+                html += `<div class="popup-field"><span class="popup-label">Année de plantation :</span> <span class="popup-value">${properties.y}</span></div>`;
+            } else {
+                html += `<div class="popup-field"><span class="popup-label">Année de plantation :</span> <span class="popup-value">Non disponible</span></div>`;
             }
             
-            html += `<div class="popup-field"><span class="popup-label">Emplacement :</span> <span class="popup-value">${emplacement}</span></div>`;
+            if (properties.tl && properties.tl !== 'Unknown') {
+                html += `<div class="popup-field"><span class="popup-label">Nom latin :</span> <span class="popup-value">${properties.tl}</span></div>`;
+            }
             
-            if (properties.y && properties.y > 0) {
-                html += `<div class="popup-field"><span class="popup-label">Année :</span> <span class="popup-value">${properties.y}</span></div>`;
-            } else {
-                html += `<div class="popup-field"><span class="popup-label">Année :</span> <span class="popup-value">Inconnue</span></div>`;
+            if (properties.a) {
+                html += `<div class="popup-field"><span class="popup-label">Arrondissement :</span> <span class="popup-value">${properties.a}</span></div>`;
+            }
+            
+            if (properties.r) {
+                html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.r}</span></div>`;
+            }
+            
+            // Fix capitalization issues: PArc -> Parc, PaRterre -> Parterre, TRottoir -> Trottoir
+            let emplacement = properties.e;
+            if (emplacement) {
+                emplacement = emplacement
+                    .replace(/PArc/gi, 'Parc')
+                    .replace(/PaRterre/gi, 'Parterre')
+                    .replace(/TRottoir/gi, 'Trottoir');
+                html += `<div class="popup-field"><span class="popup-label">Emplacement :</span> <span class="popup-value">${emplacement}</span></div>`;
             }
             
             if (properties.d) {
@@ -734,8 +749,9 @@
             document.getElementById('playBtn').textContent = '⏸ Pause';
             document.getElementById('playBtn').classList.add('active');
             
+            // Start at 1960 instead of minYear
             if (currentYear >= maxYear) {
-                currentYear = minYear;
+                currentYear = 1960;
             }
             
             playInterval = setInterval(() => {
@@ -749,7 +765,7 @@
                 document.getElementById('yearSlider').value = currentYear;
                 document.getElementById('currentYear').textContent = currentYear;
                 updateFilter();
-            }, 500); // 0.5 seconds per year (faster animation)
+            }, 250); // 0.25 seconds per year (faster animation)
         }
         
         function stopPlaying() {
