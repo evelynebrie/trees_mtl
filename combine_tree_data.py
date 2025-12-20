@@ -129,7 +129,7 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                     tree_type_english = row.get('Essence_en', 'Unknown') or 'Unknown'
                     tree_types.add(tree_type_english)
                     
-                    # Create feature
+                    # Create feature - Ultra compact version with short keys
                     geojson["features"].append({
                         "type": "Feature",
                         "geometry": {
@@ -137,14 +137,14 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                             "coordinates": [lon, lat]
                         },
                         "properties": {
-                            "arrondissement": row.get('Arrond', '') or '',
-                            "rue": (row.get('Rue', '') or '').strip(),
-                            "emplacement": (row.get('Emplacement', '') or '').strip(),
-                            "tree_type_latin": tree_type_latin,
-                            "tree_type_french": tree_type_french,
-                            "tree_type_english": tree_type_english,
-                            "diameter": row.get('DHP', '') or '',
-                            "plantation_year": year if year else 0,
+                            "a": row.get('Arrond', '') or '',  # arrondissement
+                            "r": (row.get('Rue_Nom', '') or '').strip(),  # rue
+                            "e": (row.get('Emplacement', '') or '').strip(),  # emplacement
+                            "tl": tree_type_latin,  # tree_type_latin
+                            "tf": tree_type_french,  # tree_type_french
+                            "te": tree_type_english,  # tree_type_english
+                            "d": row.get('DHP', '') or '',  # diameter
+                            "y": year if year else 0,  # plantation_year
                         }
                     })
                     
