@@ -123,11 +123,11 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                         year_range['min'] = min(year_range['min'], year)
                         year_range['max'] = max(year_range['max'], year)
                     
-                    # Tree types
+                    # Tree types - use French for dropdown
                     tree_type_latin = row.get('Essence_latin', 'Unknown') or 'Unknown'
                     tree_type_french = row.get('Essence_fr', 'Inconnu') or 'Inconnu'
                     tree_type_english = row.get('Essence_en', 'Unknown') or 'Unknown'
-                    tree_types.add(tree_type_english)
+                    tree_types.add(tree_type_french)
                     
                     # Create feature - Ultra compact version with short keys
                     geojson["features"].append({
