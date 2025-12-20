@@ -396,6 +396,9 @@
             <div class="stat-label">Total</div>
             <div class="stat-value" id="totalTrees">0</div>
         </div>
+        <div class="stat-item" id="zoomNotice" style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+            💡 Zoomez pour voir les arbres
+        </div>
     </div>
     
     <div class="overlay timeline-control">
@@ -450,12 +453,43 @@
                     throw new Error('Fichier de données non trouvé. Veuillez générer trees_combined.json.gz avec le script Python.');
                 }
                 
+                document.getElementById('loading').innerHTML = `
+                    <div class="spinner"></div>
+                    <div class="loading-text">Décompression des données...</div>
+                `;
+                
                 // Decompress and parse the data
                 const blob = await response.blob();
                 const decompressedStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
                 const decompressedBlob = await new Response(decompressedStream).blob();
                 const text = await decompressedBlob.text();
+                
+                document.getElementById('loading').innerHTML = `
+                    <div class="spinner"></div>
+                    <div class="loading-text">Traitement de 340 000 arbres...</div>
+                `;
+                
                 const data = JSON.parse(text);
+                
+                // Transform short keys to long keys for compatibility
+                document.getElementById('loading').innerHTML = `
+                    <div class="spinner"></div>
+                    <div class="loading-text">Préparation de l'affichage...</div>
+                `;
+                
+                data.features.forEach(feature => {
+                    const p = feature.properties;
+                    feature.properties = {
+                        arrondissement: p.a,
+                        rue: p.r,
+                        emplacement: p.e,
+                        tree_type_latin: p.tl,
+                        tree_type_french: p.tf,
+                        tree_type_english: p.te,
+                        diameter: p.d,
+                        plantation_year: p.y
+                    };
+                });
                 
                 treeData = data;
                 
@@ -519,18 +553,20 @@
                     data: treeData
                 });
                 
-                // Trees without dates (year = 0)
+                // Trees without dates (year = 0) - visible seulement à partir de zoom 11
                 map.addLayer({
                     id: 'trees-no-date',
                     type: 'circle',
                     source: 'trees',
                     filter: ['==', ['get', 'plantation_year'], 0],
+                    minzoom: 11,
                     paint: {
                         'circle-radius': [
                             'interpolate',
                             ['linear'],
                             ['zoom'],
-                            10, 2,
+                            11, 1.5,
+                            13, 3,
                             15, 5,
                             18, 10
                         ],
@@ -542,18 +578,20 @@
                     }
                 });
                 
-                // Trees with dates
+                // Trees with dates - visible seulement à partir de zoom 11
                 map.addLayer({
                     id: 'trees-with-date',
                     type: 'circle',
                     source: 'trees',
                     filter: ['>', ['get', 'plantation_year'], 0],
+                    minzoom: 11,
                     paint: {
                         'circle-radius': [
                             'interpolate',
                             ['linear'],
                             ['zoom'],
-                            10, 3,
+                            11, 2,
+                            13, 4,
                             15, 6,
                             18, 12
                         ],
@@ -587,6 +625,20 @@
                 map.on('mouseleave', 'trees-no-date', () => {
                     map.getCanvas().style.cursor = '';
                 });
+                
+                // Gérer le message de zoom
+                function updateZoomNotice() {
+                    const zoom = map.getZoom();
+                    const notice = document.getElementById('zoomNotice');
+                    if (zoom >= 11) {
+                        notice.style.display = 'none';
+                    } else {
+                        notice.style.display = 'block';
+                    }
+                }
+                
+                map.on('zoom', updateZoomNotice);
+                updateZoomNotice(); // Check initial zoom
                 
                 updateFilter();
                 document.getElementById('loading').style.display = 'none';
