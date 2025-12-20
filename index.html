@@ -7,7 +7,7 @@
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Caveat:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         
         * {
             margin: 0;
@@ -16,19 +16,18 @@
         }
         
         :root {
-            --green: #3a5a40;
-            --green-light: #588157;
-            --green-accent: #a3b18a;
-            --cream: #fefae0;
-            --warm: #dad7cd;
-            --text: #2b2b2b;
-            --text-muted: #656565;
-            --shadow: rgba(58, 90, 64, 0.15);
+            --green: #2d5016;
+            --green-light: #4a7c2d;
+            --green-accent: #6b9d4a;
+            --bg: #f8f9fa;
+            --text: #1a1a1a;
+            --text-muted: #666;
+            --border: rgba(45, 80, 22, 0.12);
         }
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--cream);
+            background: var(--bg);
             color: var(--text);
             overflow: hidden;
         }
@@ -94,40 +93,35 @@
         
         .title-section {
             pointer-events: auto;
-            background: var(--cream);
-            padding: 28px 32px;
-            border-radius: 24px;
-            box-shadow: 0 8px 32px var(--shadow);
-            border: 3px solid var(--green);
+            background: white;
+            padding: 24px 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--green);
         }
         
         h1 {
-            font-family: 'Caveat', cursive;
-            font-size: 48px;
-            font-weight: 700;
+            font-size: 28px;
+            font-weight: 600;
             color: var(--green);
-            margin-bottom: 4px;
-            line-height: 1.1;
-            transform: rotate(-1.5deg);
-            display: inline-block;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
         }
         
         .subtitle {
             font-size: 14px;
             color: var(--text-muted);
             font-weight: 400;
-            font-style: italic;
         }
         
         /* Controls */
         .controls {
             pointer-events: auto;
-            background: var(--cream);
+            background: white;
             padding: 20px 24px;
-            border-radius: 20px;
-            box-shadow: 0 6px 24px var(--shadow);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
             min-width: 240px;
-            border: 2px solid var(--green-accent);
         }
         
         .control-label {
@@ -144,8 +138,8 @@
             width: 100%;
             padding: 10px 14px;
             background: white;
-            border: 2px solid var(--green-accent);
-            border-radius: 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
             color: var(--text);
             font-family: 'Inter', sans-serif;
             font-size: 14px;
@@ -154,13 +148,13 @@
         }
         
         select:hover {
-            border-color: var(--green);
+            border-color: var(--green-light);
         }
         
         select:focus {
             outline: none;
             border-color: var(--green);
-            box-shadow: 0 0 0 3px rgba(58, 90, 64, 0.1);
+            box-shadow: 0 0 0 3px rgba(45, 80, 22, 0.08);
         }
             outline: none;
             border-color: var(--green);
@@ -172,12 +166,12 @@
             bottom: 160px;
             left: 24px;
             pointer-events: auto;
-            background: var(--cream);
+            background: white;
             padding: 20px 24px;
-            border-radius: 20px;
-            box-shadow: 0 6px 24px var(--shadow);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
             min-width: 180px;
-            border: 2px solid var(--green-accent);
+            border-left: 4px solid var(--green);
         }
         
         .stat-item {
@@ -210,11 +204,11 @@
             left: 24px;
             right: 24px;
             pointer-events: auto;
-            background: var(--cream);
+            background: white;
             padding: 28px 36px;
-            border-radius: 24px;
-            box-shadow: 0 8px 32px var(--shadow);
-            border: 3px solid var(--green);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--green);
         }
         
         .timeline-header {
@@ -225,9 +219,8 @@
         }
         
         .current-year {
-            font-family: 'Caveat', cursive;
-            font-size: 64px;
-            font-weight: 700;
+            font-size: 52px;
+            font-weight: 600;
             color: var(--green);
             line-height: 1;
         }
@@ -240,26 +233,24 @@
         button {
             background: var(--green);
             border: none;
-            color: var(--cream);
-            padding: 12px 22px;
-            border-radius: 16px;
+            color: white;
+            padding: 11px 22px;
+            border-radius: 10px;
             font-family: 'Inter', sans-serif;
             font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(58, 90, 64, 0.2);
+            transition: all 0.2s ease;
         }
         
         button:hover {
             background: var(--green-light);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(58, 90, 64, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(45, 80, 22, 0.25);
         }
         
         button.active {
             background: var(--green-accent);
-            color: var(--text);
         }
         
         /* Slider */
@@ -440,7 +431,7 @@
             style: 'mapbox://styles/mapbox/light-v11',
             center: [-73.597, 45.600],
             zoom: 11.5,
-            pitch: 0,
+            pitch: 45, // Angle de caméra pour vue 3D
             bearing: 0
         });
         
@@ -701,20 +692,14 @@
         }
         
         function updateStats() {
-            const selectedType = document.getElementById('treeTypeFilter').value;
+            // Don't loop through 340k trees - just show total count
+            // Mapbox handles filtering internally for rendering
+            const total = treeData.features.length;
             
-            let visible = 0;
-            treeData.features.forEach(feature => {
-                const props = feature.properties;
-                const matchesType = selectedType === 'all' || props.te === selectedType;
-                const matchesYear = props.y === 0 || props.y <= currentYear;
-                
-                if (matchesType && matchesYear) {
-                    visible++;
-                }
-            });
-            
-            document.getElementById('visibleTrees').textContent = visible.toLocaleString('fr-CA');
+            // For "visible", we'd need to query Mapbox which is expensive
+            // So just show total for now - users can see what's on screen
+            document.getElementById('visibleTrees').textContent = total.toLocaleString('fr-CA');
+            document.getElementById('totalTrees').textContent = total.toLocaleString('fr-CA');
         }
         
         // Event Listeners
