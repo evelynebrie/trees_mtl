@@ -443,13 +443,20 @@
                     <div class="loading-text">Chargement des données...</div>
                 `;
                 
-                const response = await fetch('trees_combined.json');
+                // Fetch the gzipped JSON file
+                const response = await fetch('trees_combined.json.gz');
                 
                 if (!response.ok) {
-                    throw new Error('Fichier de données non trouvé. Veuillez générer trees_combined.json avec le script Python.');
+                    throw new Error('Fichier de données non trouvé. Veuillez générer trees_combined.json.gz avec le script Python.');
                 }
                 
-                const data = await response.json();
+                // Decompress and parse the data
+                const blob = await response.blob();
+                const decompressedStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+                const decompressedBlob = await new Response(decompressedStream).blob();
+                const text = await decompressedBlob.text();
+                const data = JSON.parse(text);
+                
                 treeData = data;
                 
                 // Extract metadata if available, otherwise calculate from features
@@ -499,7 +506,7 @@
                 document.getElementById('loading').innerHTML = `
                     <div class="loading-text" style="color: #d32f2f;">
                         ❌ Erreur: ${error.message}<br><br>
-                        Veuillez générer trees_combined.json avec le script Python.
+                        Veuillez générer trees_combined.json.gz avec le script Python.
                     </div>
                 `;
             }
@@ -593,7 +600,14 @@
             html += `<div class="popup-field"><span class="popup-label">Nom latin :</span> <span class="popup-value">${properties.tree_type_latin}</span></div>`;
             html += `<div class="popup-field"><span class="popup-label">Arrondissement :</span> <span class="popup-value">${properties.arrondissement}</span></div>`;
             html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.rue}</span></div>`;
-            html += `<div class="popup-field"><span class="popup-label">Emplacement :</span> <span class="popup-value">${properties.emplacement}</span></div>`;
+            
+            // Fix typo: PArc -> Parc
+            let emplacement = properties.emplacement;
+            if (emplacement && emplacement.includes('PArc')) {
+                emplacement = emplacement.replace(/PArc/g, 'Parc');
+            }
+            
+            html += `<div class="popup-field"><span class="popup-label">Emplacement :</span> <span class="popup-value">${emplacement}</span></div>`;
             
             if (properties.plantation_year && properties.plantation_year > 0) {
                 html += `<div class="popup-field"><span class="popup-label">Année :</span> <span class="popup-value">${properties.plantation_year}</span></div>`;
@@ -702,7 +716,7 @@
                 document.getElementById('yearSlider').value = currentYear;
                 document.getElementById('currentYear').textContent = currentYear;
                 updateFilter();
-            }, 2500);
+            }, 500); // 0.5 seconds per year (faster animation)
         }
         
         function stopPlaying() {
