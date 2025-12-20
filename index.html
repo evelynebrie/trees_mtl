@@ -368,10 +368,6 @@
             .current-year {
                 font-size: 32px;
             }
-            
-            .stats-panel {
-                bottom: 180px;
-            }
         }
     </style>
 </head>
@@ -484,7 +480,7 @@
                     maxYear = data.metadata.year_range.max || 2025;
                     allTreeTypes = data.metadata.tree_types || [];
                 } else {
-                    // Calculate from features (using short keys: y = plantation_year, te = tree_type_english)
+                    // Calculate from features (using short keys: y = plantation_year, tf = tree_type_french)
                     const years = data.features
                         .map(f => f.properties.y)
                         .filter(y => y != null && y >= 1850 && y <= 2025);
@@ -493,7 +489,7 @@
                     maxYear = Math.max(...years);
                     
                     const typeSet = new Set(
-                        data.features.map(f => f.properties.te)
+                        data.features.map(f => f.properties.tf)
                     );
                     allTreeTypes = Array.from(typeSet).sort();
                 }
@@ -696,7 +692,7 @@
             ];
             
             if (selectedType !== 'all') {
-                filters.push(['==', ['get', 'te'], selectedType]);
+                filters.push(['==', ['get', 'tf'], selectedType]);
             }
             
             map.setFilter('trees-with-date', filters);
@@ -705,7 +701,7 @@
                 map.setFilter('trees-no-date', [
                     'all',
                     ['==', ['get', 'y'], 0],
-                    ['==', ['get', 'te'], selectedType]
+                    ['==', ['get', 'tf'], selectedType]
                 ]);
             } else {
                 map.setFilter('trees-no-date', ['==', ['get', 'y'], 0]);
