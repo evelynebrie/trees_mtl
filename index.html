@@ -385,21 +385,22 @@
         </div>
         
         <div class="controls">
-            <label class="control-label">Type d'arbre</label>
-            <select id="treeTypeFilter">
-                <option value="all">Tous les arbres</option>
-            </select>
+            <div style="margin-bottom: 20px;">
+                <label class="control-label">Type d'arbre</label>
+                <select id="treeTypeFilter">
+                    <option value="all">Tous les arbres</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="control-label">Nombre total d'arbres</label>
+                <div id="treeCount" style="font-size: 32px; font-weight: 600; color: var(--green); margin-top: 8px;">0</div>
+            </div>
         </div>
     </div>
     
-    <div class="overlay stats-panel">
-        <div class="stat-item">
-            <div class="stat-label">Arbres plantés</div>
-            <div class="stat-value" id="totalTrees">0</div>
-        </div>
-        <div class="stat-item" id="zoomNotice" style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
-            💡 Zoomez pour voir les arbres
-        </div>
+    <div class="overlay stats-panel" style="display: none;">
+        <!-- Hidden - tree count moved to header -->
     </div>
     
     <div class="overlay timeline-control">
@@ -448,32 +449,20 @@
                     <div class="loading-text">Chargement des données...</div>
                 `;
                 
-                // Fetch the gzipped JSON file
-                console.log('2. Fetching compressed file...');
-                const response = await fetch('trees_combined.json.gz');
+                // Fetch the JSON file
+                console.log('2. Fetching data file...');
+                const response = await fetch('trees_combined.json');
                 
                 if (!response.ok) {
                     throw new Error('Fichier de données non trouvé.');
                 }
                 
-                console.log('3. Decompressing...');
-                document.getElementById('loading').innerHTML = `
-                    <div class="spinner"></div>
-                    <div class="loading-text">Décompression des données...</div>
-                `;
-                
-                // Decompress and parse the data
-                const blob = await response.blob();
-                const decompressedStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
-                const decompressedBlob = await new Response(decompressedStream).blob();
-                const text = await decompressedBlob.text();
-                
-                console.log('4. Parsing JSON...');
-                const data = JSON.parse(text);
-                console.log('5. JSON parsed, features:', data.features.length);
+                console.log('3. Parsing JSON...');
+                const data = await response.json();
+                console.log('4. JSON parsed, features:', data.features.length);
                 treeData = data;
                 
-                console.log('6. Extracting metadata...');
+                console.log('5. Extracting metadata...');
                 // Extract metadata if available, otherwise calculate from features
                 if (data.metadata) {
                     minYear = data.metadata.year_range.min || 1900;
@@ -494,13 +483,13 @@
                     allTreeTypes = Array.from(typeSet).sort();
                 }
                 
-                console.log('7. Metadata extracted, types:', allTreeTypes.length);
+                console.log('6. Metadata extracted, types:', allTreeTypes.length);
                 currentYear = maxYear;
                 
                 // Start slider at 1960 instead of minYear for better UX
                 const sliderStart = 1960;
                 
-                console.log('8. Updating UI...');
+                console.log('7. Updating UI...');
                 // Update UI
                 document.getElementById('yearSlider').min = sliderStart;
                 document.getElementById('yearSlider').max = maxYear;
@@ -508,9 +497,9 @@
                 document.getElementById('minYear').textContent = sliderStart;
                 document.getElementById('maxYear').textContent = maxYear;
                 document.getElementById('currentYear').textContent = maxYear;
-                document.getElementById('totalTrees').textContent = treeData.features.length.toLocaleString('fr-CA');
+                document.getElementById('treeCount').textContent = treeData.features.length.toLocaleString('fr-CA');
                 
-                console.log('9. Populating tree type filter...');
+                console.log('8. Populating tree type filter...');
                 // Populate tree type filter
                 const select = document.getElementById('treeTypeFilter');
                 allTreeTypes.forEach(type => {
@@ -520,7 +509,7 @@
                     select.appendChild(option);
                 });
                 
-                console.log('10. Initializing map...');
+                console.log('9. Initializing map...');
                 initializeMap();
                 
             } catch (error) {
@@ -528,7 +517,7 @@
                 document.getElementById('loading').innerHTML = `
                     <div class="loading-text" style="color: #d32f2f;">
                         ❌ Erreur: ${error.message}<br><br>
-                        Veuillez générer trees_combined.json.gz avec le script Python.
+                        Veuillez générer trees_combined.json avec le script Python.
                     </div>
                 `;
             }
@@ -711,9 +700,25 @@
         }
         
         function updateStats() {
-            // Just show total count - Mapbox handles filtering for rendering
-            const total = treeData.features.length;
-            document.getElementById('totalTrees').textContent = total.toLocaleString('fr-CA');
+            // Count trees that match current filters (year and type)
+            let count = 0;
+            
+            for (const feature of treeData.features) {
+                const year = feature.properties.plantation_year || 0;
+                const type = feature.properties.tree_type_english;
+                
+                // Check year filter
+                const yearMatch = (year === 0 && currentYear >= 2000) || (year > 0 && year <= currentYear);
+                
+                // Check type filter
+                const typeMatch = (selectedTreeType === 'all') || (type === selectedTreeType);
+                
+                if (yearMatch && typeMatch) {
+                    count++;
+                }
+            }
+            
+            document.getElementById('treeCount').textContent = count.toLocaleString('fr-CA');
         }
         
         // Event Listeners
