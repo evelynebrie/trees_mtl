@@ -390,7 +390,7 @@
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="addressSearch" placeholder="Ex: 1234 rue Saint-Denis" 
                            style="flex: 1; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13.5px;">
-                    <button id="searchBtn" style="padding: 11px 18px; white-space: nowrap;">🔍 Chercher</button>
+                    <button id="searchBtn" style="padding: 11px 18px; white-space: nowrap;">Chercher</button>
                 </div>
                 <div id="searchMessage" style="margin-top: 6px; font-size: 12px; color: var(--text-muted); display: none;"></div>
             </div>
@@ -442,7 +442,7 @@
         const map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/light-v11',
-            center: [-73.597, 45.600],
+            center: [-73.587, 45.508], // Mont Royal / Plateau
             zoom: 11.5,
             minZoom: 10,  // Prevent zooming out too far
             maxZoom: 18,
@@ -458,6 +458,7 @@
         let isPlaying = false;
         let playInterval = null;
         let allTreeTypes = [];
+        let yearCounts = {}; // Cache tree counts per year for performance
         
         // Load pre-processed tree data (much faster!)
         async function loadTreeData() {
@@ -529,7 +530,10 @@
                     select.appendChild(option);
                 });
                 
-                console.log('9. Initializing map...');
+                console.log('9. Pre-calculating counts for performance...');
+                precalculateCounts();
+                
+                console.log('10. Initializing map...');
                 initializeMap();
                 
             } catch (error) {
@@ -584,18 +588,70 @@
                 console.log('13. Adding tree data source with', treeData.features.length, 'features...');
                 map.addSource('trees', {
                     type: 'geojson',
-                    data: treeData
+                    data: treeData,
+                    cluster: true,
+                    clusterMaxZoom: 13, // Cluster until zoom 13, then show individual trees
+                    clusterRadius: 50   // Radius of each cluster
                 });
                 
                 console.log('14. Source added, adding layers...');
                 
-                // Trees without dates (year = 0) - visible seulement à partir de zoom 11
+                // Cluster circles
+                map.addLayer({
+                    id: 'clusters',
+                    type: 'circle',
+                    source: 'trees',
+                    filter: ['has', 'point_count'],
+                    paint: {
+                        'circle-color': [
+                            'step',
+                            ['get', 'point_count'],
+                            '#6b9d4a',  // Small clusters
+                            100,
+                            '#4a7c2d',  // Medium clusters
+                            750,
+                            '#2d5016'   // Large clusters
+                        ],
+                        'circle-radius': [
+                            'step',
+                            ['get', 'point_count'],
+                            15,   // Small clusters
+                            100,
+                            25,   // Medium clusters
+                            750,
+                            35    // Large clusters
+                        ],
+                        'circle-opacity': 0.8
+                    }
+                });
+                
+                // Cluster count labels
+                map.addLayer({
+                    id: 'cluster-count',
+                    type: 'symbol',
+                    source: 'trees',
+                    filter: ['has', 'point_count'],
+                    layout: {
+                        'text-field': '{point_count_abbreviated}',
+                        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                        'text-size': 12
+                    },
+                    paint: {
+                        'text-color': '#ffffff'
+                    }
+                });
+                
+                // Trees without dates (year = 0) - only shown when unclustered
                 map.addLayer({
                     id: 'trees-no-date',
                     type: 'circle',
                     source: 'trees',
-                    filter: ['==', ['get', 'plantation_year'], 0],
-                    minzoom: 11,
+                    filter: [
+                        'all',
+                        ['!', ['has', 'point_count']],
+                        ['==', ['get', 'plantation_year'], 0]
+                    ],
+                    minzoom: 13,
                     paint: {
                         'circle-radius': [
                             'interpolate',
@@ -614,13 +670,17 @@
                     }
                 });
                 
-                // Trees with dates - visible seulement à partir de zoom 11
+                // Trees with dates - only shown when unclustered
                 map.addLayer({
                     id: 'trees-with-date',
                     type: 'circle',
                     source: 'trees',
-                    filter: ['>', ['get', 'plantation_year'], 0],
-                    minzoom: 11,
+                    filter: [
+                        'all',
+                        ['!', ['has', 'point_count']],
+                        ['>', ['get', 'plantation_year'], 0]
+                    ],
+                    minzoom: 13,
                     paint: {
                         'circle-radius': [
                             'interpolate',
@@ -646,6 +706,34 @@
                     }
                 });
                 
+                // Click on cluster to zoom in
+                map.on('click', 'clusters', (e) => {
+                    const features = map.queryRenderedFeatures(e.point, {
+                        layers: ['clusters']
+                    });
+                    const clusterId = features[0].properties.cluster_id;
+                    map.getSource('trees').getClusterExpansionZoom(
+                        clusterId,
+                        (err, zoom) => {
+                            if (err) return;
+                            
+                            map.easeTo({
+                                center: features[0].geometry.coordinates,
+                                zoom: zoom
+                            });
+                        }
+                    );
+                });
+                
+                // Change cursor on cluster hover
+                map.on('mouseenter', 'clusters', () => {
+                    map.getCanvas().style.cursor = 'pointer';
+                });
+                map.on('mouseleave', 'clusters', () => {
+                    map.getCanvas().style.cursor = '';
+                });
+                
+                // Individual tree click handlers
                 map.on('click', 'trees-with-date', showPopup);
                 map.on('click', 'trees-no-date', showPopup);
                 
@@ -661,20 +749,6 @@
                 map.on('mouseleave', 'trees-no-date', () => {
                     map.getCanvas().style.cursor = '';
                 });
-                
-                // Gérer le message de zoom
-                function updateZoomNotice() {
-                    const zoom = map.getZoom();
-                    const notice = document.getElementById('zoomNotice');
-                    if (zoom >= 11) {
-                        notice.style.display = 'none';
-                    } else {
-                        notice.style.display = 'block';
-                    }
-                }
-                
-                map.on('zoom', updateZoomNotice);
-                updateZoomNotice(); // Check initial zoom
                 
                 console.log('15. Updating filters...');
                 updateFilter();
@@ -767,26 +841,59 @@
         }
         
         function updateStats() {
-            // Count trees that match current filters (year and type)
+            // Use cached counts for much better performance
             const selectedTreeType = document.getElementById('treeTypeFilter').value;
-            let count = 0;
             
+            if (selectedTreeType === 'all') {
+                // Use pre-calculated cumulative count
+                document.getElementById('treeCount').textContent = (yearCounts[currentYear] || 0).toLocaleString('fr-CA');
+            } else {
+                // For filtered types, we need to count (slower but less common)
+                let count = 0;
+                for (const feature of treeData.features) {
+                    const year = feature.properties.plantation_year || 0;
+                    const type = feature.properties.tree_type_french;
+                    
+                    // Cumulative: show all trees planted up to currentYear
+                    // Trees with no date (year=0) are counted from the start (1960)
+                    const yearMatch = (year === 0) || (year > 0 && year <= currentYear);
+                    const typeMatch = (type === selectedTreeType);
+                    
+                    if (yearMatch && typeMatch) {
+                        count++;
+                    }
+                }
+                document.getElementById('treeCount').textContent = count.toLocaleString('fr-CA');
+            }
+        }
+        
+        function precalculateCounts() {
+            // Pre-calculate cumulative tree counts for each year for fast slider updates
+            console.log('Pre-calculating year counts for performance...');
+            
+            const sliderStart = 1960;
+            const treesWithNoDate = treeData.features.filter(f => !f.properties.plantation_year || f.properties.plantation_year === 0).length;
+            
+            // Start with trees that have no date (they exist from the beginning)
+            let cumulativeCount = treesWithNoDate;
+            yearCounts[sliderStart] = cumulativeCount;
+            
+            // Count trees by year
+            const treesByYear = {};
             for (const feature of treeData.features) {
-                const year = feature.properties.plantation_year || 0;
-                const type = feature.properties.tree_type_french;
-                
-                // Check year filter
-                const yearMatch = (year === 0 && currentYear >= 2000) || (year > 0 && year <= currentYear);
-                
-                // Check type filter
-                const typeMatch = (selectedTreeType === 'all') || (type === selectedTreeType);
-                
-                if (yearMatch && typeMatch) {
-                    count++;
+                const year = feature.properties.plantation_year;
+                if (year && year > 0) {
+                    treesByYear[year] = (treesByYear[year] || 0) + 1;
                 }
             }
             
-            document.getElementById('treeCount').textContent = count.toLocaleString('fr-CA');
+            // Build cumulative counts
+            for (let year = sliderStart + 1; year <= maxYear; year++) {
+                cumulativeCount += (treesByYear[year] || 0);
+                yearCounts[year] = cumulativeCount;
+            }
+            
+            console.log(`✓ Cached counts for ${Object.keys(yearCounts).length} years`);
         }
         
         // Event Listeners
