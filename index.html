@@ -469,7 +469,7 @@
                     maxYear = data.metadata.year_range.max || 2025;
                     allTreeTypes = data.metadata.tree_types || [];
                 } else {
-                    // Calculate from features (using short keys: y = plantation_year, tf = tree_type_french)
+                    // Calculate from features
                     const years = data.features
                         .map(f => f.properties.y)
                         .filter(y => y != null && y >= 1850 && y <= 2025);
@@ -478,7 +478,7 @@
                     maxYear = Math.max(...years);
                     
                     const typeSet = new Set(
-                        data.features.map(f => f.properties.tf)
+                        data.features.map(f => f.properties.tree_type_french)
                     );
                     allTreeTypes = Array.from(typeSet).sort();
                 }
@@ -526,20 +526,55 @@
         function initializeMap() {
             console.log('11. Waiting for map to load...');
             map.on('load', () => {
-                console.log('12. Map loaded, adding source with', treeData.features.length, 'features...');
+                console.log('12. Map loaded, adding 3D buildings...');
+                
+                // Add 3D buildings layer
+                const layers = map.getStyle().layers;
+                const labelLayerId = layers.find(
+                    (layer) => layer.type === 'symbol' && layer.layout['text-field']
+                ).id;
+                
+                map.addLayer({
+                    'id': '3d-buildings',
+                    'source': 'composite',
+                    'source-layer': 'building',
+                    'filter': ['==', 'extrude', 'true'],
+                    'type': 'fill-extrusion',
+                    'minzoom': 13,
+                    'paint': {
+                        'fill-extrusion-color': '#ddd',
+                        'fill-extrusion-height': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            13, 0,
+                            13.05, ['get', 'height']
+                        ],
+                        'fill-extrusion-base': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            13, 0,
+                            13.05, ['get', 'min_height']
+                        ],
+                        'fill-extrusion-opacity': 0.6
+                    }
+                }, labelLayerId);
+                
+                console.log('13. Adding tree data source with', treeData.features.length, 'features...');
                 map.addSource('trees', {
                     type: 'geojson',
                     data: treeData
                 });
                 
-                console.log('13. Source added, adding layers...');
+                console.log('14. Source added, adding layers...');
                 
                 // Trees without dates (year = 0) - visible seulement à partir de zoom 11
                 map.addLayer({
                     id: 'trees-no-date',
                     type: 'circle',
                     source: 'trees',
-                    filter: ['==', ['get', 'y'], 0],
+                    filter: ['==', ['get', 'plantation_year'], 0],
                     minzoom: 11,
                     paint: {
                         'circle-radius': [
@@ -564,7 +599,7 @@
                     id: 'trees-with-date',
                     type: 'circle',
                     source: 'trees',
-                    filter: ['>', ['get', 'y'], 0],
+                    filter: ['>', ['get', 'plantation_year'], 0],
                     minzoom: 11,
                     paint: {
                         'circle-radius': [
@@ -579,7 +614,7 @@
                         'circle-color': [
                             'interpolate',
                             ['linear'],
-                            ['get', 'y'],
+                            ['get', 'plantation_year'],
                             minYear, '#2d5016',
                             (minYear + maxYear) / 2, '#4a7c2d',
                             maxYear, '#6b9d4a'
@@ -621,9 +656,9 @@
                 map.on('zoom', updateZoomNotice);
                 updateZoomNotice(); // Check initial zoom
                 
-                console.log('14. Updating filters...');
+                console.log('15. Updating filters...');
                 updateFilter();
-                console.log('15. Done! Hiding loading screen...');
+                console.log('16. Done! Hiding loading screen...');
                 document.getElementById('loading').style.display = 'none';
             });
         }
@@ -631,29 +666,29 @@
         function showPopup(e) {
             const properties = e.features[0].properties;
             
-            let html = `<div class="popup-title">${properties.tf || 'Arbre'}</div>`;
+            let html = `<div class="popup-title">${properties.tree_type_french || 'Arbre'}</div>`;
             
             // Année de plantation en premier
-            if (properties.y && properties.y > 0) {
-                html += `<div class="popup-field"><span class="popup-label">Année de plantation :</span> <span class="popup-value">${properties.y}</span></div>`;
+            if (properties.plantation_year && properties.plantation_year > 0) {
+                html += `<div class="popup-field"><span class="popup-label">Année de plantation :</span> <span class="popup-value">${properties.plantation_year}</span></div>`;
             } else {
                 html += `<div class="popup-field"><span class="popup-label">Année de plantation :</span> <span class="popup-value">Non disponible</span></div>`;
             }
             
-            if (properties.tl && properties.tl !== 'Unknown') {
-                html += `<div class="popup-field"><span class="popup-label">Nom latin :</span> <span class="popup-value">${properties.tl}</span></div>`;
+            if (properties.tree_type_latin && properties.tree_type_latin !== 'Unknown') {
+                html += `<div class="popup-field"><span class="popup-label">Nom latin :</span> <span class="popup-value">${properties.tree_type_latin}</span></div>`;
             }
             
-            if (properties.a) {
-                html += `<div class="popup-field"><span class="popup-label">Arrondissement :</span> <span class="popup-value">${properties.a}</span></div>`;
+            if (properties.arrondissement) {
+                html += `<div class="popup-field"><span class="popup-label">Arrondissement :</span> <span class="popup-value">${properties.arrondissement}</span></div>`;
             }
             
-            if (properties.r) {
-                html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.r}</span></div>`;
+            if (properties.rue) {
+                html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.rue}</span></div>`;
             }
             
             // Fix capitalization issues
-            let emplacement = properties.e;
+            let emplacement = properties.emplacement;
             if (emplacement) {
                 emplacement = emplacement
                     .replace(/PArc/gi, 'Parc')
@@ -662,8 +697,8 @@
                 html += `<div class="popup-field"><span class="popup-label">Emplacement :</span> <span class="popup-value">${emplacement}</span></div>`;
             }
             
-            if (properties.d) {
-                html += `<div class="popup-field"><span class="popup-label">Diamètre :</span> <span class="popup-value">${properties.d} cm</span></div>`;
+            if (properties.diameter) {
+                html += `<div class="popup-field"><span class="popup-label">Diamètre :</span> <span class="popup-value">${properties.diameter} cm</span></div>`;
             }
             
             new mapboxgl.Popup()
@@ -677,7 +712,7 @@
             
             let filters = [
                 'all',
-                ['<=', ['get', 'y'], currentYear]
+                ['<=', ['get', 'plantation_year'], currentYear]
             ];
             
             if (selectedType !== 'all') {
@@ -689,11 +724,11 @@
             if (selectedType !== 'all') {
                 map.setFilter('trees-no-date', [
                     'all',
-                    ['==', ['get', 'y'], 0],
+                    ['==', ['get', 'plantation_year'], 0],
                     ['==', ['get', 'tf'], selectedType]
                 ]);
             } else {
-                map.setFilter('trees-no-date', ['==', ['get', 'y'], 0]);
+                map.setFilter('trees-no-date', ['==', ['get', 'plantation_year'], 0]);
             }
             
             updateStats();
