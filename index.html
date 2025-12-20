@@ -7,7 +7,7 @@
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Caveat:wght@400;600;700&display=swap');
         
         * {
             margin: 0;
@@ -16,18 +16,19 @@
         }
         
         :root {
-            --green: #2d5016;
-            --green-light: #4a7c2d;
-            --green-accent: #6b9d4a;
-            --bg: #fafafa;
-            --text: #1a1a1a;
-            --text-muted: #666;
-            --border: rgba(45, 80, 22, 0.1);
+            --green: #3a5a40;
+            --green-light: #588157;
+            --green-accent: #a3b18a;
+            --cream: #fefae0;
+            --warm: #dad7cd;
+            --text: #2b2b2b;
+            --text-muted: #656565;
+            --shadow: rgba(58, 90, 64, 0.15);
         }
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg);
+            background: var(--cream);
             color: var(--text);
             overflow: hidden;
         }
@@ -93,34 +94,40 @@
         
         .title-section {
             pointer-events: auto;
-            background: white;
-            padding: 20px 28px;
-            border-radius: 12px;
-            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            background: var(--cream);
+            padding: 28px 32px;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px var(--shadow);
+            border: 3px solid var(--green);
         }
         
         h1 {
-            font-size: 24px;
-            font-weight: 600;
+            font-family: 'Caveat', cursive;
+            font-size: 48px;
+            font-weight: 700;
             color: var(--green);
             margin-bottom: 4px;
-            letter-spacing: -0.5px;
+            line-height: 1.1;
+            transform: rotate(-1.5deg);
+            display: inline-block;
         }
         
         .subtitle {
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text-muted);
             font-weight: 400;
+            font-style: italic;
         }
         
         /* Controls */
         .controls {
             pointer-events: auto;
-            background: white;
-            padding: 18px 22px;
-            border-radius: 12px;
-            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            background: var(--cream);
+            padding: 20px 24px;
+            border-radius: 20px;
+            box-shadow: 0 6px 24px var(--shadow);
             min-width: 240px;
+            border: 2px solid var(--green-accent);
         }
         
         .control-label {
@@ -137,8 +144,8 @@
             width: 100%;
             padding: 10px 14px;
             background: white;
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            border: 2px solid var(--green-accent);
+            border-radius: 12px;
             color: var(--text);
             font-family: 'Inter', sans-serif;
             font-size: 14px;
@@ -147,10 +154,14 @@
         }
         
         select:hover {
-            border-color: var(--green-light);
+            border-color: var(--green);
         }
         
         select:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(58, 90, 64, 0.1);
+        }
             outline: none;
             border-color: var(--green);
             box-shadow: 0 0 0 3px rgba(45, 80, 22, 0.05);
@@ -161,11 +172,12 @@
             bottom: 160px;
             left: 24px;
             pointer-events: auto;
-            background: white;
-            padding: 18px 22px;
-            border-radius: 12px;
-            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            background: var(--cream);
+            padding: 20px 24px;
+            border-radius: 20px;
+            box-shadow: 0 6px 24px var(--shadow);
             min-width: 180px;
+            border: 2px solid var(--green-accent);
         }
         
         .stat-item {
@@ -198,10 +210,11 @@
             left: 24px;
             right: 24px;
             pointer-events: auto;
-            background: white;
-            padding: 24px 32px;
-            border-radius: 12px;
-            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            background: var(--cream);
+            padding: 28px 36px;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px var(--shadow);
+            border: 3px solid var(--green);
         }
         
         .timeline-header {
@@ -212,8 +225,9 @@
         }
         
         .current-year {
-            font-size: 42px;
-            font-weight: 600;
+            font-family: 'Caveat', cursive;
+            font-size: 64px;
+            font-weight: 700;
             color: var(--green);
             line-height: 1;
         }
@@ -224,28 +238,28 @@
         }
         
         button {
-            background: white;
-            border: 1px solid var(--border);
-            color: var(--green);
-            padding: 10px 20px;
-            border-radius: 8px;
+            background: var(--green);
+            border: none;
+            color: var(--cream);
+            padding: 12px 22px;
+            border-radius: 16px;
             font-family: 'Inter', sans-serif;
             font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(58, 90, 64, 0.2);
         }
         
         button:hover {
-            background: var(--green);
-            color: white;
-            border-color: var(--green);
+            background: var(--green-light);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(58, 90, 64, 0.3);
         }
         
         button.active {
-            background: var(--green);
-            color: white;
-            border-color: var(--green);
+            background: var(--green-accent);
+            color: var(--text);
         }
         
         /* Slider */
@@ -470,27 +484,6 @@
                 `;
                 
                 const data = JSON.parse(text);
-                
-                // Transform short keys to long keys for compatibility
-                document.getElementById('loading').innerHTML = `
-                    <div class="spinner"></div>
-                    <div class="loading-text">Préparation de l'affichage...</div>
-                `;
-                
-                data.features.forEach(feature => {
-                    const p = feature.properties;
-                    feature.properties = {
-                        arrondissement: p.a,
-                        rue: p.r,
-                        emplacement: p.e,
-                        tree_type_latin: p.tl,
-                        tree_type_french: p.tf,
-                        tree_type_english: p.te,
-                        diameter: p.d,
-                        plantation_year: p.y
-                    };
-                });
-                
                 treeData = data;
                 
                 // Extract metadata if available, otherwise calculate from features
@@ -499,27 +492,30 @@
                     maxYear = data.metadata.year_range.max || 2025;
                     allTreeTypes = data.metadata.tree_types || [];
                 } else {
-                    // Calculate from features
+                    // Calculate from features (using short keys: y = plantation_year, te = tree_type_english)
                     const years = data.features
-                        .map(f => f.properties.plantation_year)
+                        .map(f => f.properties.y)
                         .filter(y => y != null && y >= 1850 && y <= 2025);
                     
                     minYear = Math.min(...years);
                     maxYear = Math.max(...years);
                     
                     const typeSet = new Set(
-                        data.features.map(f => f.properties.tree_type_english)
+                        data.features.map(f => f.properties.te)
                     );
                     allTreeTypes = Array.from(typeSet).sort();
                 }
                 
                 currentYear = maxYear;
                 
+                // Start slider at 1960 instead of minYear for better UX
+                const sliderStart = 1960;
+                
                 // Update UI
-                document.getElementById('yearSlider').min = minYear;
+                document.getElementById('yearSlider').min = sliderStart;
                 document.getElementById('yearSlider').max = maxYear;
                 document.getElementById('yearSlider').value = maxYear;
-                document.getElementById('minYear').textContent = minYear;
+                document.getElementById('minYear').textContent = sliderStart;
                 document.getElementById('maxYear').textContent = maxYear;
                 document.getElementById('currentYear').textContent = maxYear;
                 document.getElementById('totalTrees').textContent = treeData.features.length.toLocaleString('fr-CA');
@@ -558,7 +554,7 @@
                     id: 'trees-no-date',
                     type: 'circle',
                     source: 'trees',
-                    filter: ['==', ['get', 'plantation_year'], 0],
+                    filter: ['==', ['get', 'y'], 0],
                     minzoom: 11,
                     paint: {
                         'circle-radius': [
@@ -583,7 +579,7 @@
                     id: 'trees-with-date',
                     type: 'circle',
                     source: 'trees',
-                    filter: ['>', ['get', 'plantation_year'], 0],
+                    filter: ['>', ['get', 'y'], 0],
                     minzoom: 11,
                     paint: {
                         'circle-radius': [
@@ -598,7 +594,7 @@
                         'circle-color': [
                             'interpolate',
                             ['linear'],
-                            ['get', 'plantation_year'],
+                            ['get', 'y'],
                             minYear, '#2d5016',
                             (minYear + maxYear) / 2, '#4a7c2d',
                             maxYear, '#6b9d4a'
@@ -648,27 +644,27 @@
         function showPopup(e) {
             const properties = e.features[0].properties;
             
-            let html = `<div class="popup-title">${properties.tree_type_french}</div>`;
-            html += `<div class="popup-field"><span class="popup-label">Nom latin :</span> <span class="popup-value">${properties.tree_type_latin}</span></div>`;
-            html += `<div class="popup-field"><span class="popup-label">Arrondissement :</span> <span class="popup-value">${properties.arrondissement}</span></div>`;
-            html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.rue}</span></div>`;
+            let html = `<div class="popup-title">${properties.tf}</div>`;
+            html += `<div class="popup-field"><span class="popup-label">Nom latin :</span> <span class="popup-value">${properties.tl}</span></div>`;
+            html += `<div class="popup-field"><span class="popup-label">Arrondissement :</span> <span class="popup-value">${properties.a}</span></div>`;
+            html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.r}</span></div>`;
             
             // Fix typo: PArc -> Parc
-            let emplacement = properties.emplacement;
+            let emplacement = properties.e;
             if (emplacement && emplacement.includes('PArc')) {
                 emplacement = emplacement.replace(/PArc/g, 'Parc');
             }
             
             html += `<div class="popup-field"><span class="popup-label">Emplacement :</span> <span class="popup-value">${emplacement}</span></div>`;
             
-            if (properties.plantation_year && properties.plantation_year > 0) {
-                html += `<div class="popup-field"><span class="popup-label">Année :</span> <span class="popup-value">${properties.plantation_year}</span></div>`;
+            if (properties.y && properties.y > 0) {
+                html += `<div class="popup-field"><span class="popup-label">Année :</span> <span class="popup-value">${properties.y}</span></div>`;
             } else {
                 html += `<div class="popup-field"><span class="popup-label">Année :</span> <span class="popup-value">Inconnue</span></div>`;
             }
             
-            if (properties.diameter) {
-                html += `<div class="popup-field"><span class="popup-label">Diamètre :</span> <span class="popup-value">${properties.diameter} cm</span></div>`;
+            if (properties.d) {
+                html += `<div class="popup-field"><span class="popup-label">Diamètre :</span> <span class="popup-value">${properties.d} cm</span></div>`;
             }
             
             new mapboxgl.Popup()
@@ -682,11 +678,11 @@
             
             let filters = [
                 'all',
-                ['<=', ['get', 'plantation_year'], currentYear]
+                ['<=', ['get', 'y'], currentYear]
             ];
             
             if (selectedType !== 'all') {
-                filters.push(['==', ['get', 'tree_type_english'], selectedType]);
+                filters.push(['==', ['get', 'te'], selectedType]);
             }
             
             map.setFilter('trees-with-date', filters);
@@ -694,11 +690,11 @@
             if (selectedType !== 'all') {
                 map.setFilter('trees-no-date', [
                     'all',
-                    ['==', ['get', 'plantation_year'], 0],
-                    ['==', ['get', 'tree_type_english'], selectedType]
+                    ['==', ['get', 'y'], 0],
+                    ['==', ['get', 'te'], selectedType]
                 ]);
             } else {
-                map.setFilter('trees-no-date', ['==', ['get', 'plantation_year'], 0]);
+                map.setFilter('trees-no-date', ['==', ['get', 'y'], 0]);
             }
             
             updateStats();
@@ -710,8 +706,8 @@
             let visible = 0;
             treeData.features.forEach(feature => {
                 const props = feature.properties;
-                const matchesType = selectedType === 'all' || props.tree_type_english === selectedType;
-                const matchesYear = props.plantation_year === 0 || props.plantation_year <= currentYear;
+                const matchesType = selectedType === 'all' || props.te === selectedType;
+                const matchesYear = props.y === 0 || props.y <= currentYear;
                 
                 if (matchesType && matchesYear) {
                     visible++;
