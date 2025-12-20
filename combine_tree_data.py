@@ -46,6 +46,7 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
     total_valid = 0
     total_skipped = 0
     trees_with_dates = 0
+    headers = None  # Store headers from first file
     
     # Process each file
     for i, csv_file in enumerate(csv_files, 1):
@@ -57,7 +58,14 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
             file_skipped = 0
             
             with open(csv_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
+                # First file has headers, others don't
+                if i == 1:
+                    reader = csv.DictReader(f)
+                    headers = reader.fieldnames
+                    print(f"    ✓ First file has headers - using them for all files")
+                else:
+                    # Use headers from first file
+                    reader = csv.DictReader(f, fieldnames=headers)
                 
                 for row in reader:
                     file_rows += 1
