@@ -8,6 +8,7 @@ import json
 import glob
 import os
 import sys
+import gzip
 from datetime import datetime
 
 # Column names for the CSV files (they don't have headers)
@@ -175,12 +176,21 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
     
     file_size_mb = os.path.getsize(output_file) / (1024 * 1024)
     
+    # Also write gzipped version for GitHub
+    gzip_file = output_file + '.gz'
+    print(f"📝 Writing {gzip_file} (compressed)...")
+    with gzip.open(gzip_file, 'wt', encoding='utf-8') as f:
+        json.dump(geojson, f, ensure_ascii=False, separators=(',', ':'))
+    
+    gzip_size_mb = os.path.getsize(gzip_file) / (1024 * 1024)
+    
     # Summary
     print(f"\n{'='*60}")
     print(f"✅ SUCCESS!")
     print(f"{'='*60}")
-    print(f"Output file:     {output_file}")
-    print(f"File size:       {file_size_mb:.2f} MB")
+    print(f"JSON file:       {output_file} ({file_size_mb:.2f} MB)")
+    print(f"Gzipped file:    {gzip_file} ({gzip_size_mb:.2f} MB)")
+    print(f"Compression:     {(1 - gzip_size_mb/file_size_mb)*100:.1f}% smaller")
     print(f"")
     print(f"CSV rows read:   {total_rows:,}")
     print(f"Trees mapped:    {total_valid:,} ({total_valid/total_rows*100:.1f}%)")
@@ -190,9 +200,9 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
     print(f"Tree species:    {len(tree_types)}")
     print(f"{'='*60}\n")
     
-    if total_valid < 100000:
-        print(f"⚠️  WARNING: Only {total_valid:,} trees found. Expected 300,000+")
-        print(f"   Check if all 7 CSV files were processed correctly.\n")
+    if gzip_size_mb > 100:
+        print(f"⚠️  WARNING: Gzipped file is still {gzip_size_mb:.2f} MB")
+        print(f"   GitHub limit is 100 MB. Consider further optimization.\n")
 
 if __name__ == '__main__':
     print("=" * 60)
