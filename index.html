@@ -386,6 +386,16 @@
         
         <div class="controls">
             <div style="margin-bottom: 20px;">
+                <label class="control-label">Rechercher une adresse</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="addressSearch" placeholder="Ex: 1234 rue Saint-Denis" 
+                           style="flex: 1; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13.5px;">
+                    <button id="searchBtn" style="padding: 11px 18px; white-space: nowrap;">🔍 Chercher</button>
+                </div>
+                <div id="searchMessage" style="margin-top: 6px; font-size: 12px; color: var(--text-muted); display: none;"></div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
                 <label class="control-label">Type d'arbre</label>
                 <select id="treeTypeFilter">
                     <option value="all">Tous les arbres</option>
@@ -423,12 +433,21 @@
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoiZXZlbHluZWJyaWUiLCJhIjoiY2themE5OGF2MDdxazJybG9oNzUyaXoxNSJ9.njPe2lcTp82DKjDeGkHaQA';
         
+        // Montreal bounds to restrict panning
+        const montrealBounds = [
+            [-73.98, 45.35], // Southwest coordinates
+            [-73.47, 45.75]  // Northeast coordinates
+        ];
+        
         const map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/light-v11',
             center: [-73.597, 45.600],
             zoom: 11.5,
-            pitch: 45, // Angle de caméra pour vue 3D
+            minZoom: 10,  // Prevent zooming out too far
+            maxZoom: 18,
+            maxBounds: montrealBounds, // Restrict panning to Montreal area
+            pitch: 45,
             bearing: 0
         });
         
@@ -497,6 +516,7 @@
                 document.getElementById('minYear').textContent = sliderStart;
                 document.getElementById('maxYear').textContent = maxYear;
                 document.getElementById('currentYear').textContent = maxYear;
+                // Show all trees for 2025 (cumulative - all trees planted up to 2025)
                 document.getElementById('treeCount').textContent = treeData.features.length.toLocaleString('fr-CA');
                 
                 console.log('8. Populating tree type filter...');
@@ -659,7 +679,13 @@
                 console.log('15. Updating filters...');
                 updateFilter();
                 console.log('16. Done! Hiding loading screen...');
-                document.getElementById('loading').style.display = 'none';
+                
+                // Ensure loading screen is hidden
+                try {
+                    document.getElementById('loading').style.display = 'none';
+                } catch (e) {
+                    console.error('Error hiding loading screen:', e);
+                }
             });
         }
         
@@ -716,7 +742,7 @@
             ];
             
             if (selectedType !== 'all') {
-                filters.push(['==', ['get', 'tf'], selectedType]);
+                filters.push(['==', ['get', 'tree_type_french'], selectedType]);
             }
             
             map.setFilter('trees-with-date', filters);
@@ -783,6 +809,73 @@
             updateFilter();
         });
         
+        // Address search functionality
+        async function searchAddress() {
+            const address = document.getElementById('addressSearch').value.trim();
+            const messageEl = document.getElementById('searchMessage');
+            
+            if (!address) {
+                messageEl.style.display = 'block';
+                messageEl.style.color = '#d32f2f';
+                messageEl.textContent = 'Veuillez entrer une adresse';
+                return;
+            }
+            
+            messageEl.style.display = 'block';
+            messageEl.style.color = 'var(--text-muted)';
+            messageEl.textContent = 'Recherche en cours...';
+            
+            try {
+                const query = `${address}, Montreal, Quebec, Canada`;
+                const response = await fetch(
+                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxgl.accessToken}&limit=1`
+                );
+                const data = await response.json();
+                
+                if (data.features && data.features.length > 0) {
+                    const [lng, lat] = data.features[0].center;
+                    
+                    // Check if location is within Montreal bounds
+                    const bounds = map.getMaxBounds();
+                    const sw = bounds.getSouthWest();
+                    const ne = bounds.getNorthEast();
+                    
+                    if (lng < sw.lng || lng > ne.lng || lat < sw.lat || lat > ne.lat) {
+                        messageEl.style.color = '#d32f2f';
+                        messageEl.textContent = 'Cette adresse est en dehors des limites de Montréal';
+                        return;
+                    }
+                    
+                    // Fly to location
+                    map.flyTo({
+                        center: [lng, lat],
+                        zoom: 16,
+                        duration: 2000
+                    });
+                    
+                    messageEl.style.color = 'var(--green)';
+                    messageEl.textContent = 'Adresse trouvée';
+                    setTimeout(() => {
+                        messageEl.style.display = 'none';
+                    }, 3000);
+                } else {
+                    messageEl.style.color = '#d32f2f';
+                    messageEl.textContent = 'Adresse introuvable';
+                }
+            } catch (error) {
+                messageEl.style.color = '#d32f2f';
+                messageEl.textContent = 'Erreur lors de la recherche';
+                console.error('Search error:', error);
+            }
+        }
+        
+        document.getElementById('searchBtn').addEventListener('click', searchAddress);
+        document.getElementById('addressSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchAddress();
+            }
+        });
+        
         function startPlaying() {
             isPlaying = true;
             document.getElementById('playBtn').textContent = '⏸ Pause';
@@ -817,6 +910,18 @@
                 playInterval = null;
             }
         }
+        
+        // Force hide loading screen after 10 seconds if something goes wrong
+        setTimeout(() => {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl && loadingEl.style.display !== 'none') {
+                console.warn('Force hiding loading screen after timeout');
+                loadingEl.style.display = 'none';
+            }
+        }, 10000);
+        
+        // Add navigation controls
+        map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
         
         loadTreeData();
     </script>
