@@ -734,6 +734,12 @@
         }
         
         function updateFilter() {
+            // Safety check: don't run if map layers don't exist yet
+            if (!map.getLayer('trees-with-date')) {
+                console.warn('Layers not ready yet, skipping filter update');
+                return;
+            }
+            
             const selectedType = document.getElementById('treeTypeFilter').value;
             
             let filters = [
@@ -751,7 +757,7 @@
                 map.setFilter('trees-no-date', [
                     'all',
                     ['==', ['get', 'plantation_year'], 0],
-                    ['==', ['get', 'tf'], selectedType]
+                    ['==', ['get', 'tree_type_french'], selectedType]
                 ]);
             } else {
                 map.setFilter('trees-no-date', ['==', ['get', 'plantation_year'], 0]);
@@ -762,11 +768,12 @@
         
         function updateStats() {
             // Count trees that match current filters (year and type)
+            const selectedTreeType = document.getElementById('treeTypeFilter').value;
             let count = 0;
             
             for (const feature of treeData.features) {
                 const year = feature.properties.plantation_year || 0;
-                const type = feature.properties.tree_type_english;
+                const type = feature.properties.tree_type_french;
                 
                 // Check year filter
                 const yearMatch = (year === 0 && currentYear >= 2000) || (year > 0 && year <= currentYear);
