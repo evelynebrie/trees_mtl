@@ -10,6 +10,17 @@ import os
 import sys
 from datetime import datetime
 
+# Column names for the CSV files (they don't have headers)
+CSV_COLUMNS = [
+    'Type_Propriete', 'No_Civique', 'Arrond', 'Arrond_Nom', 
+    'Col4', 'Col5', 'Col6', 'Emplacement', 'Essence_code', 
+    'Essence_latin', 'Essence_fr', 'Essence_en', 'DHP', 
+    'Date_Plantation', 'Date_Releve', 'Col15', 'Col16', 
+    'Rue', 'Rue_Nom', 'Col19', 'Col20', 'Col21', 'Col22', 
+    'Col23', 'Col24', 'Col25', 'Col26', 'Secteur', 
+    'X_Coord', 'Y_Coord', 'Longitude', 'Latitude'
+]
+
 def parse_date(date_string):
     """Parse date and return year between 1850-2025, or None"""
     if not date_string or date_string.strip() == '':
@@ -47,6 +58,9 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
     total_skipped = 0
     trees_with_dates = 0
     
+    # Get headers from first file
+    first_file_headers = None
+    
     # Process each file
     for i, csv_file in enumerate(csv_files, 1):
         print(f"[{i}/{len(csv_files)}] Processing {csv_file}...")
@@ -57,7 +71,28 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
             file_skipped = 0
             
             with open(csv_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
+                # Read first line to check if it's a header
+                first_line = f.readline().strip()
+                f.seek(0)  # Reset to beginning
+                
+                # If this is the first file, check if it has headers
+                if i == 1:
+                    # If first line contains column names (not just numbers), use it
+                    if any(name in first_line for name in ['Arrond', 'Longitude', 'Latitude', 'Essence']):
+                        print(f"    ✓ First file has headers - using them for all files")
+                        reader = csv.DictReader(f)
+                        first_file_headers = reader.fieldnames
+                    else:
+                        print(f"    ✓ No headers detected - using predefined columns")
+                        reader = csv.DictReader(f, fieldnames=CSV_COLUMNS)
+                        first_file_headers = CSV_COLUMNS
+                else:
+                    # For subsequent files, use the same header structure
+                    # Skip first line if it looks like data (not a header)
+                    if not any(name in first_line for name in ['Arrond', 'Longitude', 'Latitude', 'Essence']):
+                        reader = csv.DictReader(f, fieldnames=first_file_headers)
+                    else:
+                        reader = csv.DictReader(f)
                 
                 for row in reader:
                     file_rows += 1
@@ -68,7 +103,9 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                         lon = float(row.get('Longitude', 0))
                         lat = float(row.get('Latitude', 0))
                         
-                        if lon == 0 or lat == 0 or abs(lon) < 10 or abs(lat) < 10:
+                        # Skip if coordinates are missing or zero
+                        # Montreal coords: lon ≈ -73.6, lat ≈ 45.5
+                        if lon == 0 or lat == 0:
                             file_skipped += 1
                             total_skipped += 1
                             continue
