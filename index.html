@@ -167,7 +167,8 @@
         
         /* Stats */
         .stats-panel {
-            bottom: 160px;
+            top: 50%;
+            transform: translateY(-50%);
             left: 24px;
             pointer-events: auto;
             background: white;
@@ -397,11 +398,7 @@
     
     <div class="overlay stats-panel">
         <div class="stat-item">
-            <div class="stat-label">Arbres visibles</div>
-            <div class="stat-value" id="visibleTrees">0</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">Total</div>
+            <div class="stat-label">Arbres plantés</div>
             <div class="stat-value" id="totalTrees">0</div>
         </div>
         <div class="stat-item" id="zoomNotice" style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
@@ -449,18 +446,21 @@
         // Load pre-processed tree data (much faster!)
         async function loadTreeData() {
             try {
+                console.log('1. Starting data load...');
                 document.getElementById('loading').innerHTML = `
                     <div class="spinner"></div>
                     <div class="loading-text">Chargement des données...</div>
                 `;
                 
                 // Fetch the gzipped JSON file
+                console.log('2. Fetching compressed file...');
                 const response = await fetch('trees_combined.json.gz');
                 
                 if (!response.ok) {
                     throw new Error('Fichier de données non trouvé. Veuillez générer trees_combined.json.gz avec le script Python.');
                 }
                 
+                console.log('3. Decompressing...');
                 document.getElementById('loading').innerHTML = `
                     <div class="spinner"></div>
                     <div class="loading-text">Décompression des données...</div>
@@ -472,14 +472,12 @@
                 const decompressedBlob = await new Response(decompressedStream).blob();
                 const text = await decompressedBlob.text();
                 
-                document.getElementById('loading').innerHTML = `
-                    <div class="spinner"></div>
-                    <div class="loading-text">Traitement de 340 000 arbres...</div>
-                `;
-                
+                console.log('4. Parsing JSON...');
                 const data = JSON.parse(text);
+                console.log('5. JSON parsed, features:', data.features.length);
                 treeData = data;
                 
+                console.log('6. Extracting metadata...');
                 // Extract metadata if available, otherwise calculate from features
                 if (data.metadata) {
                     minYear = data.metadata.year_range.min || 1900;
@@ -500,11 +498,13 @@
                     allTreeTypes = Array.from(typeSet).sort();
                 }
                 
+                console.log('7. Metadata extracted, types:', allTreeTypes.length);
                 currentYear = maxYear;
                 
                 // Start slider at 1960 instead of minYear for better UX
                 const sliderStart = 1960;
                 
+                console.log('8. Updating UI...');
                 // Update UI
                 document.getElementById('yearSlider').min = sliderStart;
                 document.getElementById('yearSlider').max = maxYear;
@@ -514,6 +514,7 @@
                 document.getElementById('currentYear').textContent = maxYear;
                 document.getElementById('totalTrees').textContent = treeData.features.length.toLocaleString('fr-CA');
                 
+                console.log('9. Populating tree type filter...');
                 // Populate tree type filter
                 const select = document.getElementById('treeTypeFilter');
                 allTreeTypes.forEach(type => {
@@ -523,6 +524,7 @@
                     select.appendChild(option);
                 });
                 
+                console.log('10. Initializing map...');
                 initializeMap();
                 
             } catch (error) {
@@ -537,11 +539,15 @@
         }
         
         function initializeMap() {
+            console.log('11. Waiting for map to load...');
             map.on('load', () => {
+                console.log('12. Map loaded, adding source with', treeData.features.length, 'features...');
                 map.addSource('trees', {
                     type: 'geojson',
                     data: treeData
                 });
+                
+                console.log('13. Source added, adding layers...');
                 
                 // Trees without dates (year = 0) - visible seulement à partir de zoom 11
                 map.addLayer({
@@ -630,7 +636,9 @@
                 map.on('zoom', updateZoomNotice);
                 updateZoomNotice(); // Check initial zoom
                 
+                console.log('14. Updating filters...');
                 updateFilter();
+                console.log('15. Done! Hiding loading screen...');
                 document.getElementById('loading').style.display = 'none';
             });
         }
@@ -707,13 +715,8 @@
         }
         
         function updateStats() {
-            // Don't loop through 340k trees - just show total count
-            // Mapbox handles filtering internally for rendering
+            // Just show total count - Mapbox handles filtering for rendering
             const total = treeData.features.length;
-            
-            // For "visible", we'd need to query Mapbox which is expensive
-            // So just show total for now - users can see what's on screen
-            document.getElementById('visibleTrees').textContent = total.toLocaleString('fr-CA');
             document.getElementById('totalTrees').textContent = total.toLocaleString('fr-CA');
         }
         
