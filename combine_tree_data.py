@@ -8,19 +8,7 @@ import json
 import glob
 import os
 import sys
-import gzip
 from datetime import datetime
-
-# Column names for the CSV files (they don't have headers)
-CSV_COLUMNS = [
-    'Type_Propriete', 'No_Civique', 'Arrond', 'Arrond_Nom', 
-    'Col4', 'Col5', 'Col6', 'Emplacement', 'Essence_code', 
-    'Essence_latin', 'Essence_fr', 'Essence_en', 'DHP', 
-    'Date_Plantation', 'Date_Releve', 'Col15', 'Col16', 
-    'Rue', 'Rue_Nom', 'Col19', 'Col20', 'Col21', 'Col22', 
-    'Col23', 'Col24', 'Col25', 'Col26', 'Secteur', 
-    'X_Coord', 'Y_Coord', 'Longitude', 'Latitude'
-]
 
 def parse_date(date_string):
     """Parse date and return year between 1850-2025, or None"""
@@ -59,9 +47,6 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
     total_skipped = 0
     trees_with_dates = 0
     
-    # Get headers from first file
-    first_file_headers = None
-    
     # Process each file
     for i, csv_file in enumerate(csv_files, 1):
         print(f"[{i}/{len(csv_files)}] Processing {csv_file}...")
@@ -72,28 +57,7 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
             file_skipped = 0
             
             with open(csv_file, 'r', encoding='utf-8') as f:
-                # Read first line to check if it's a header
-                first_line = f.readline().strip()
-                f.seek(0)  # Reset to beginning
-                
-                # If this is the first file, check if it has headers
-                if i == 1:
-                    # If first line contains column names (not just numbers), use it
-                    if any(name in first_line for name in ['Arrond', 'Longitude', 'Latitude', 'Essence']):
-                        print(f"    ✓ First file has headers - using them for all files")
-                        reader = csv.DictReader(f)
-                        first_file_headers = reader.fieldnames
-                    else:
-                        print(f"    ✓ No headers detected - using predefined columns")
-                        reader = csv.DictReader(f, fieldnames=CSV_COLUMNS)
-                        first_file_headers = CSV_COLUMNS
-                else:
-                    # For subsequent files, use the same header structure
-                    # Skip first line if it looks like data (not a header)
-                    if not any(name in first_line for name in ['Arrond', 'Longitude', 'Latitude', 'Essence']):
-                        reader = csv.DictReader(f, fieldnames=first_file_headers)
-                    else:
-                        reader = csv.DictReader(f)
+                reader = csv.DictReader(f)
                 
                 for row in reader:
                     file_rows += 1
@@ -104,9 +68,7 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                         lon = float(row.get('Longitude', 0))
                         lat = float(row.get('Latitude', 0))
                         
-                        # Skip if coordinates are missing or zero
-                        # Montreal coords: lon ≈ -73.6, lat ≈ 45.5
-                        if lon == 0 or lat == 0:
+                        if lon == 0 or lat == 0 or abs(lon) < 10 or abs(lat) < 10:
                             file_skipped += 1
                             total_skipped += 1
                             continue
@@ -129,7 +91,7 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                     tree_type_english = row.get('Essence_en', 'Unknown') or 'Unknown'
                     tree_types.add(tree_type_french)
                     
-                    # Create feature
+                    # Create feature with FULL property names
                     geojson["features"].append({
                         "type": "Feature",
                         "geometry": {
@@ -176,21 +138,12 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
     
     file_size_mb = os.path.getsize(output_file) / (1024 * 1024)
     
-    # Also write gzipped version for GitHub
-    gzip_file = output_file + '.gz'
-    print(f"📝 Writing {gzip_file} (compressed)...")
-    with gzip.open(gzip_file, 'wt', encoding='utf-8') as f:
-        json.dump(geojson, f, ensure_ascii=False, separators=(',', ':'))
-    
-    gzip_size_mb = os.path.getsize(gzip_file) / (1024 * 1024)
-    
     # Summary
     print(f"\n{'='*60}")
     print(f"✅ SUCCESS!")
     print(f"{'='*60}")
-    print(f"JSON file:       {output_file} ({file_size_mb:.2f} MB)")
-    print(f"Gzipped file:    {gzip_file} ({gzip_size_mb:.2f} MB)")
-    print(f"Compression:     {(1 - gzip_size_mb/file_size_mb)*100:.1f}% smaller")
+    print(f"Output file:     {output_file}")
+    print(f"File size:       {file_size_mb:.2f} MB")
     print(f"")
     print(f"CSV rows read:   {total_rows:,}")
     print(f"Trees mapped:    {total_valid:,} ({total_valid/total_rows*100:.1f}%)")
@@ -200,9 +153,9 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
     print(f"Tree species:    {len(tree_types)}")
     print(f"{'='*60}\n")
     
-    if gzip_size_mb > 100:
-        print(f"⚠️  WARNING: Gzipped file is still {gzip_size_mb:.2f} MB")
-        print(f"   GitHub limit is 100 MB. Consider further optimization.\n")
+    if total_valid < 100000:
+        print(f"⚠️  WARNING: Only {total_valid:,} trees found. Expected 300,000+")
+        print(f"   Check if all 7 CSV files were processed correctly.\n")
 
 if __name__ == '__main__':
     print("=" * 60)
