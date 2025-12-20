@@ -137,8 +137,8 @@ def combine_csv_files(pattern='arbres-part-*.csv', output_file='trees_combined.j
                             "coordinates": [lon, lat]
                         },
                         "properties": {
-                            "a": row.get('Arrond', '') or '',  # arrondissement
-                            "r": (row.get('Rue_Nom', '') or '').strip(),  # rue
+                            "a": row.get('Arrond_Nom', '') or '',  # arrondissement (nom complet)
+                            "r": (row.get('Rue_Nom', '') or '').strip(),  # rue (nom complet)
                             "e": (row.get('Emplacement', '') or '').strip(),  # emplacement
                             "tl": tree_type_latin,  # tree_type_latin
                             "tf": tree_type_french,  # tree_type_french
