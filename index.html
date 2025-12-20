@@ -453,7 +453,7 @@
                 const response = await fetch('trees_combined.json.gz');
                 
                 if (!response.ok) {
-                    throw new Error('Fichier de données non trouvé. Veuillez générer trees_combined.json.gz avec le script Python.');
+                    throw new Error('Fichier de données non trouvé.');
                 }
                 
                 console.log('3. Decompressing...');
@@ -663,7 +663,7 @@
                 html += `<div class="popup-field"><span class="popup-label">Rue :</span> <span class="popup-value">${properties.r}</span></div>`;
             }
             
-            // Fix capitalization issues: PArc -> Parc, PaRterre -> Parterre, TRottoir -> Trottoir
+            // Fix capitalization issues
             let emplacement = properties.e;
             if (emplacement) {
                 emplacement = emplacement
